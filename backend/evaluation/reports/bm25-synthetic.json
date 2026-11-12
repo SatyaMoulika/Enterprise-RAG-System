@@ -1,0 +1,241 @@
+{
+  "dataset_description": "Synthetic, manually labelled regression examples. Not a production quality benchmark or a sample of private user documents.",
+  "model": null,
+  "embedding_batch_seconds": null,
+  "limits": {
+    "candidate_k": 20,
+    "context_characters": 24000
+  },
+  "caveat": "Synthetic retrieval regression only. Ranking time excludes database, embeddings and generation. No faithfulness, answer correctness, citation accuracy or production quality claim.",
+  "reports": [
+    {
+      "strategy": "bm25",
+      "k": 5,
+      "answerable_queries": 11,
+      "unanswerable_queries": 2,
+      "macro_metrics": {
+        "precision": 0.18181818181818182,
+        "recall": 0.8181818181818182,
+        "mrr": 0.8181818181818182,
+        "ndcg": 0.8181818181818182
+      },
+      "unanswerable_empty_result_rate": 1.0,
+      "results": [
+        {
+          "id": "exact-policy",
+          "retrieved_ids": [
+            2
+          ],
+          "relevant_ids": [
+            2
+          ],
+          "metrics": {
+            "precision": 0.2,
+            "recall": 1.0,
+            "mrr": 1.0,
+            "ndcg": 1.0,
+            "empty_result": null
+          },
+          "ranking_ms": 0.7194439986051293
+        },
+        {
+          "id": "exact-invoice",
+          "retrieved_ids": [
+            5
+          ],
+          "relevant_ids": [
+            5
+          ],
+          "metrics": {
+            "precision": 0.2,
+            "recall": 1.0,
+            "mrr": 1.0,
+            "ndcg": 1.0,
+            "empty_result": null
+          },
+          "ranking_ms": 0.2155940001102863
+        },
+        {
+          "id": "acronym-sla",
+          "retrieved_ids": [
+            3
+          ],
+          "relevant_ids": [
+            3
+          ],
+          "metrics": {
+            "precision": 0.2,
+            "recall": 1.0,
+            "mrr": 1.0,
+            "ndcg": 1.0,
+            "empty_result": null
+          },
+          "ranking_ms": 0.23170099848357495
+        },
+        {
+          "id": "clinical-governance",
+          "retrieved_ids": [
+            1
+          ],
+          "relevant_ids": [
+            1
+          ],
+          "metrics": {
+            "precision": 0.2,
+            "recall": 1.0,
+            "mrr": 1.0,
+            "ndcg": 1.0,
+            "empty_result": null
+          },
+          "ranking_ms": 0.20405200120876543
+        },
+        {
+          "id": "account-removal",
+          "retrieved_ids": [
+            4,
+            7
+          ],
+          "relevant_ids": [
+            4
+          ],
+          "metrics": {
+            "precision": 0.2,
+            "recall": 1.0,
+            "mrr": 1.0,
+            "ndcg": 1.0,
+            "empty_result": null
+          },
+          "ranking_ms": 0.2497549994586734
+        },
+        {
+          "id": "backup-retention",
+          "retrieved_ids": [
+            6
+          ],
+          "relevant_ids": [
+            6
+          ],
+          "metrics": {
+            "precision": 0.2,
+            "recall": 1.0,
+            "mrr": 1.0,
+            "ndcg": 1.0,
+            "empty_result": null
+          },
+          "ranking_ms": 0.18630100021255203
+        },
+        {
+          "id": "workspace-permissions",
+          "retrieved_ids": [
+            7,
+            4
+          ],
+          "relevant_ids": [
+            7
+          ],
+          "metrics": {
+            "precision": 0.2,
+            "recall": 1.0,
+            "mrr": 1.0,
+            "ndcg": 1.0,
+            "empty_result": null
+          },
+          "ranking_ms": 0.18427000031806529
+        },
+        {
+          "id": "gpu-requirements",
+          "retrieved_ids": [
+            8
+          ],
+          "relevant_ids": [
+            8
+          ],
+          "metrics": {
+            "precision": 0.2,
+            "recall": 1.0,
+            "mrr": 1.0,
+            "ndcg": 1.0,
+            "empty_result": null
+          },
+          "ranking_ms": 0.1841690009314334
+        },
+        {
+          "id": "paraphrase-opening",
+          "retrieved_ids": [],
+          "relevant_ids": [
+            9
+          ],
+          "metrics": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "mrr": 0.0,
+            "ndcg": 0.0,
+            "empty_result": null
+          },
+          "ranking_ms": 0.1809109999157954
+        },
+        {
+          "id": "paraphrase-medical",
+          "retrieved_ids": [],
+          "relevant_ids": [
+            10
+          ],
+          "metrics": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "mrr": 0.0,
+            "ndcg": 0.0,
+            "empty_result": null
+          },
+          "ranking_ms": 0.31366199982585385
+        },
+        {
+          "id": "multiple-evidence",
+          "retrieved_ids": [
+            2,
+            3,
+            8
+          ],
+          "relevant_ids": [
+            2,
+            3
+          ],
+          "metrics": {
+            "precision": 0.4,
+            "recall": 1.0,
+            "mrr": 1.0,
+            "ndcg": 1.0,
+            "empty_result": null
+          },
+          "ranking_ms": 0.3246300002501812
+        },
+        {
+          "id": "unanswerable-private",
+          "retrieved_ids": [],
+          "relevant_ids": [],
+          "metrics": {
+            "precision": null,
+            "recall": null,
+            "mrr": null,
+            "ndcg": null,
+            "empty_result": true
+          },
+          "ranking_ms": 0.19963900012953673
+        },
+        {
+          "id": "unanswerable-finance",
+          "retrieved_ids": [],
+          "relevant_ids": [],
+          "metrics": {
+            "precision": null,
+            "recall": null,
+            "mrr": null,
+            "ndcg": null,
+            "empty_result": true
+          },
+          "ranking_ms": 0.17364400082442444
+        }
+      ]
+    }
+  ]
+}
