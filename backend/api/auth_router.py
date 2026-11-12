@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from database.session import get_db
-from schemas.auth import RegisterRequest, LoginRequest, TokenResponse
+from schemas.auth import LoginRequest, RegisterRequest, TokenResponse
 from services.auth_service import AuthService
 
 auth_router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -27,7 +27,6 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
         }
 
     except ValueError as e:
-        print("REGISTER ERROR:", str(e))
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
