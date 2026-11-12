@@ -74,6 +74,10 @@ Open `http://127.0.0.1:5173`. The Vite proxy keeps API requests on the same brow
 - Answers include `sources` (document IDs, kept for the old client) and structured `citations` (retrieved title, chunk and excerpt). These are retrieval provenance, **not proof that every generated claim is supported**. Evaluate grounding before public release.
 - HTTP provider calls have finite timeouts and sanitised errors. Importing the API never fetches model weights.
 
+## Organisation members
+
+Administrators can now open **Members** in the React sidebar to add, list, search and remove workspace accounts. Members and administrators are selectable roles at creation. The current account cannot remove itself, and old tokens cannot regain access when an email is re-created. Sign in again after updating; no database reset is needed. See [member-management behaviour and verification](docs/workspace-members.md).
+
 ## Answer formatting and excerpt boundaries
 
 Answers render safe Markdown, including headings, lists, code and tables. New uploads use sentence-aware chunks with a soft size target, whole-unit overlap and conservative PDF line-wrap cleanup. See [formatting and re-indexing notes](docs/answer-format-and-chunking.md). Re-upload affected documents and remove old copies to replace already-stored character slices.

@@ -39,10 +39,12 @@ from alembic.config import Config  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
 from core.config import settings  # noqa: E402
-from database.session import engine  # noqa: E402
+from database.session import SessionLocal, engine  # noqa: E402
 from main import app  # noqa: E402
+from models.user import User  # noqa: E402
 from services.embedding_service import EmbeddingService  # noqa: E402
 from services.llm_service import LLMService  # noqa: E402
+from services.user_service import UserService  # noqa: E402
 
 config = Config(str(Path(__file__).resolve().parents[1] / "alembic.ini"))
 command.upgrade(config, "head")
@@ -100,8 +102,64 @@ with TemporaryDirectory(prefix="rag-postgres-test-") as directory:
             ]
             == []
         )
+        # Two active administrators attempt to remove each other concurrently.
+        from concurrent.futures import ThreadPoolExecutor
+        from threading import Barrier
+
+        from sqlalchemy import select
+
+        owner = client.get("/users/me", headers=headers).json()
+        teammate = client.post(
+            "/users/create_user",
+            headers=headers,
+            json={
+                "email": "admin-team@example.com",
+                "password": "test-only-password",
+                "role": "admin",
+            },
+        )
+        assert teammate.status_code == 200, teammate.text
+        second_token = client.post(
+            "/auth/login",
+            json={"email": "admin-team@example.com", "password": "test-only-password"},
+        ).json()["access_token"]
+        ids = [owner["id"], teammate.json()["id"]]
+        tokens = {ids[0]: headers, ids[1]: {"Authorization": f"Bearer {second_token}"}}
+        barrier = Barrier(2)
+
+        def mutual_removal(actor_id, target_id):
+            with SessionLocal() as db:
+                actor = db.get(User, actor_id)
+                barrier.wait(timeout=5)
+                try:
+                    assert UserService.delete_user(db, target_id, actor)
+                    return "removed"
+                except PermissionError:
+                    db.rollback()
+                    return "denied"
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            futures = [
+                pool.submit(mutual_removal, ids[0], ids[1]),
+                pool.submit(mutual_removal, ids[1], ids[0]),
+            ]
+            outcomes = [future.result(timeout=15) for future in futures]
+        assert sorted(outcomes) == ["denied", "removed"], outcomes
+        with SessionLocal() as db:
+            survivors = db.scalars(
+                select(User).where(
+                    User.enterprise_id == owner["enterprise_id"],
+                    User.role == "admin",
+                    User.is_active.is_(True),
+                )
+            ).all()
+            assert len(survivors) == 1
+            survivor_id = survivors[0].id
+        removed_id = next(identity for identity in ids if identity != survivor_id)
+        assert client.get("/users/me", headers=tokens[removed_id]).status_code == 401
+        assert client.get("/users/me", headers=tokens[survivor_id]).status_code == 200
 command.downgrade(config, "base")
 engine.dispose()
 print(
-    "PostgreSQL smoke passed: migrations/schema parity, readiness, registration, upload, JSON vectors, citation retrieval, tenant isolation and deletion. Inference was mocked."
+    "PostgreSQL smoke passed: migrations/schema parity, readiness, registration, upload, JSON vectors, citation retrieval, tenant isolation, deletion and concurrent administrator removal protection. Inference was mocked."
 )

@@ -2,7 +2,7 @@ from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
-from core.security import decode_access_token
+from core.security import decode_access_token, token_matches_account
 from database.session import get_db
 from models.user import User
 from repositories.user_repository import UserRepository
@@ -26,7 +26,11 @@ def get_current_user(
     except ValueError:
         raise denied from None
     user = UserRepository.get_by_email(db, payload["sub"])
-    if user is None or not user.is_active:
+    if (
+        user is None
+        or not user.is_active
+        or not token_matches_account(payload, user.id, user.hashed_password)
+    ):
         raise denied
     return user
 
