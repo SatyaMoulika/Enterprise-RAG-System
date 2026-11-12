@@ -575,6 +575,9 @@ legacy-ui = [
 local-embeddings = [
     { name = "sentence-transformers" },
 ]
+reranking = [
+    { name = "sentence-transformers" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -597,11 +600,12 @@ requires-dist = [
     { name = "python-multipart", specifier = ">=0.0.20,<1" },
     { name = "requests", marker = "extra == 'legacy-ui'", specifier = ">=2.32,<3" },
     { name = "sentence-transformers", marker = "extra == 'local-embeddings'", specifier = ">=3,<6" },
+    { name = "sentence-transformers", marker = "extra == 'reranking'", specifier = ">=3,<6" },
     { name = "sqlalchemy", specifier = ">=2.0,<2.1" },
     { name = "streamlit", marker = "extra == 'legacy-ui'", specifier = ">=1.40,<2" },
     { name = "uvicorn", specifier = ">=0.30,<1" },
 ]
-provides-extras = ["legacy-ui", "local-embeddings"]
+provides-extras = ["reranking", "legacy-ui", "local-embeddings"]
 
 [package.metadata.requires-dev]
 dev = [

@@ -1,0 +1,225 @@
+{
+  "description": "Fictional organisation policies authored for regression evaluation; not the user's actual policies or a production benchmark.",
+  "chunks": [
+    {
+      "id": 1,
+      "document_id": 1,
+      "title": "PTO-2026-current.txt",
+      "chunk_index": 0,
+      "chunk_text": "CURRENT POLICY PTO-2026: Full-time employees receive 20 days of paid annual leave. At most five unused days may be carried forward. This policy replaces PTO-2024."
+    },
+    {
+      "id": 2,
+      "document_id": 2,
+      "title": "contractor-leave.txt",
+      "chunk_index": 0,
+      "chunk_text": "Contractors are not eligible for employee paid annual leave. Contractor absences are unpaid unless their individual contract explicitly provides otherwise."
+    },
+    {
+      "id": 3,
+      "document_id": 3,
+      "title": "PTO-2024-archived.txt",
+      "chunk_index": 0,
+      "chunk_text": "ARCHIVED POLICY PTO-2024: Full-time employees previously received 15 days of annual leave. This document is superseded by PTO-2026 and must not be used for current allowances."
+    },
+    {
+      "id": 4,
+      "document_id": 4,
+      "title": "P1-incidents.txt",
+      "chunk_index": 0,
+      "chunk_text": "Priority P1 incidents require an initial response within 15 minutes. This is a response deadline, not a resolution guarantee."
+    },
+    {
+      "id": 5,
+      "document_id": 5,
+      "title": "P2-incidents.txt",
+      "chunk_index": 0,
+      "chunk_text": "Priority P2 incidents require an initial response within four hours. P2 response deadlines do not apply to P1 incidents."
+    },
+    {
+      "id": 6,
+      "document_id": 6,
+      "title": "log-retention.txt",
+      "chunk_index": 0,
+      "chunk_text": "Application logs are retained for 30 days. This retention period does not determine the database backup retention period."
+    },
+    {
+      "id": 7,
+      "document_id": 7,
+      "title": "backup-retention.txt",
+      "chunk_index": 0,
+      "chunk_text": "Encrypted database backups are retained for 90 days. Restoring a backup requires administrator approval."
+    },
+    {
+      "id": 8,
+      "document_id": 8,
+      "title": "administrator-access.txt",
+      "chunk_index": 0,
+      "chunk_text": "Only administrators can create and remove workspace accounts. An administrator cannot remove their own account through Members."
+    },
+    {
+      "id": 9,
+      "document_id": 9,
+      "title": "member-access.txt",
+      "chunk_index": 0,
+      "chunk_text": "Members may browse workspace documents and ask questions. Members cannot upload or delete documents and cannot manage workspace accounts."
+    },
+    {
+      "id": 10,
+      "document_id": 10,
+      "title": "account-removal.txt",
+      "chunk_index": 0,
+      "chunk_text": "Removing an account prevents future authenticated requests. Recreating its email address does not reactivate old tokens. An already-running request may finish."
+    },
+    {
+      "id": 11,
+      "document_id": 11,
+      "title": "policy-scope.txt",
+      "chunk_index": 0,
+      "chunk_text": "These published organisation policies do not contain individual salary records, executive contact details or discretionary bonus amounts."
+    },
+    {
+      "id": 12,
+      "document_id": 12,
+      "title": "response-vs-resolution.txt",
+      "chunk_index": 0,
+      "chunk_text": "Initial response acknowledges an incident and begins triage. None of these policies promises a fixed incident resolution time."
+    }
+  ],
+  "queries": [
+    {
+      "id": "current-leave",
+      "question": "What is the current annual leave allowance for a full-time employee?",
+      "relevant_ids": [
+        1
+      ],
+      "reference_answer": "20 paid days under PTO-2026; the archived 15-day allowance is superseded."
+    },
+    {
+      "id": "contractor-leave",
+      "question": "Does a contractor automatically receive the same paid annual leave as an employee?",
+      "relevant_ids": [
+        2
+      ],
+      "reference_answer": "No. Contractor absences are unpaid unless the individual contract provides otherwise."
+    },
+    {
+      "id": "p1-response",
+      "question": "What is the initial response deadline for a P1 incident?",
+      "relevant_ids": [
+        4
+      ],
+      "reference_answer": "15 minutes. It is not a resolution guarantee."
+    },
+    {
+      "id": "p2-response",
+      "question": "What is the initial response deadline for P2 incidents?",
+      "relevant_ids": [
+        5
+      ],
+      "reference_answer": "Four hours, not the P1 deadline."
+    },
+    {
+      "id": "log-retention",
+      "question": "How long are application logs kept?",
+      "relevant_ids": [
+        6
+      ],
+      "reference_answer": "30 days."
+    },
+    {
+      "id": "backup-retention",
+      "question": "How long are encrypted database backups kept?",
+      "relevant_ids": [
+        7
+      ],
+      "reference_answer": "90 days."
+    },
+    {
+      "id": "manage-accounts",
+      "question": "Who can add or remove workspace accounts?",
+      "relevant_ids": [
+        8
+      ],
+      "reference_answer": "Administrators only; self-removal is not allowed through Members."
+    },
+    {
+      "id": "member-permissions",
+      "question": "Can a member delete documents or manage accounts?",
+      "relevant_ids": [
+        9
+      ],
+      "reference_answer": "No. Members can browse documents and ask questions but cannot delete documents or manage accounts."
+    },
+    {
+      "id": "email-reuse",
+      "question": "Will an old token work if a removed account's email is recreated?",
+      "relevant_ids": [
+        10
+      ],
+      "reference_answer": "No. Recreating the email does not reactivate old tokens."
+    },
+    {
+      "id": "carry-forward",
+      "question": "How many unused leave days can be carried forward?",
+      "relevant_ids": [
+        1
+      ],
+      "reference_answer": "At most five days."
+    },
+    {
+      "id": "retention-comparison",
+      "question": "Compare application log and database backup retention periods.",
+      "relevant_ids": [
+        6,
+        7
+      ],
+      "reference_answer": "Logs: 30 days. Encrypted database backups: 90 days."
+    },
+    {
+      "id": "incident-comparison",
+      "question": "Compare the initial response deadlines for P1 and P2 incidents.",
+      "relevant_ids": [
+        4,
+        5
+      ],
+      "reference_answer": "P1: 15 minutes. P2: four hours."
+    },
+    {
+      "id": "leave-comparison",
+      "question": "Do full-time employees and contractors have the same paid leave entitlement?",
+      "relevant_ids": [
+        1,
+        2
+      ],
+      "reference_answer": "No. Full-time employees receive 20 paid days; contractors do not automatically receive employee paid annual leave."
+    },
+    {
+      "id": "private-phone",
+      "question": "What is the CEO's private phone number?",
+      "relevant_ids": [],
+      "reference_answer": "Refuse or state that the provided documents do not contain that number; do not invent one."
+    },
+    {
+      "id": "bonus-amount",
+      "question": "How much discretionary bonus will I receive this year?",
+      "relevant_ids": [],
+      "reference_answer": "State that the documents do not specify the individual's bonus amount."
+    },
+    {
+      "id": "resolution-time",
+      "question": "What exact resolution time is guaranteed for a P1 incident?",
+      "relevant_ids": [
+        4,
+        12
+      ],
+      "reference_answer": "No fixed resolution time is promised. Distinguish the 15-minute initial response deadline from resolution."
+    },
+    {
+      "id": "individual-salary",
+      "question": "What is Maya's exact salary this month?",
+      "relevant_ids": [],
+      "reference_answer": "The policies do not contain an individual's salary. Decline to invent an amount."
+    }
+  ]
+}

@@ -10,6 +10,7 @@ dependencies = [
  "bcrypt>=4,<5", "python-multipart>=0.0.20,<1", "httpx>=0.28,<1", "pypdf>=5,<7",
 ]
 [project.optional-dependencies]
+reranking = ["sentence-transformers>=3,<6"]
 legacy-ui = ["streamlit>=1.40,<2", "requests>=2.32,<3"]
 local-embeddings = ["sentence-transformers>=3,<6"]
 [dependency-groups]

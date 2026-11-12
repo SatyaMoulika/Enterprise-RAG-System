@@ -18,7 +18,10 @@ services:
       - rag_models:/root/.ollama
     # Internal only. Use 'docker compose exec ollama ollama pull ...' to load models.
   api:
-    build: ./backend
+    build:
+      context: ./backend
+      args:
+        RAG_INSTALL_RERANKING: ${RAG_INSTALL_RERANKING:-false}
     environment:
       DATABASE_URL: postgresql+psycopg://rag:${RAG_DB_PASSWORD:?Set RAG_DB_PASSWORD}@postgres:5432/rag
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Set JWT_SECRET_KEY in .env}
@@ -29,6 +32,8 @@ services:
       EMBEDDING_BACKEND: ollama
       EMBEDDING_MODEL: all-minilm
       EMBEDDING_DIMENSION: 384
+      RERANKER_MODE: ${RERANKER_MODE:-none}
+      RERANKER_MODEL: ${RERANKER_MODEL:-cross-encoder/ms-marco-MiniLM-L-6-v2}
       RETRIEVAL_STRATEGY: ${RETRIEVAL_STRATEGY:-dense}
       RETRIEVAL_TOP_K: ${RETRIEVAL_TOP_K:-5}
       RETRIEVAL_CANDIDATES: ${RETRIEVAL_CANDIDATES:-20}
@@ -38,6 +43,7 @@ services:
       - "127.0.0.1:8000:8000"
     volumes:
       - rag_uploads:/app/uploads
+      - rag_reranker_cache:/app/model-cache
     depends_on:
       postgres:
         condition: service_healthy
@@ -54,3 +60,4 @@ volumes:
   rag_postgres:
   rag_models:
   rag_uploads:
+  rag_reranker_cache:
