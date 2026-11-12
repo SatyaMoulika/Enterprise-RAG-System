@@ -33,6 +33,8 @@ def create_user(
         )
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from None
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from None
 
 
 @users_router.get("/get_all_users", response_model=list[UserResponse])
@@ -57,8 +59,13 @@ def delete_user(
     user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
     require_admin(current_user)
-    temp_var_db_response = UserService.delete_user(db, user_id, current_user.enterprise_id)
-    if not temp_var_db_response:
+    try:
+        deleted = UserService.delete_user(db, user_id, current_user)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from None
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from None
+    if not deleted:
         raise HTTPException(404, "User not found")
 
     return {"message": "deleted"}

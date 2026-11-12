@@ -12,6 +12,7 @@ import type { User } from './api/types';
 import { AuthScreen } from './components/AuthScreen';
 import { ChatPanel } from './components/ChatPanel';
 import { DocumentsPanel } from './components/DocumentsPanel';
+import { MembersPanel } from './components/MembersPanel';
 interface Session {
   token: string;
   user: User;
@@ -59,6 +60,9 @@ function Workspace({ session, onSignOut }: { session: Session; onSignOut: () => 
             items={[
               { id: 'chat', label: 'Ask documents', icon: '✧' },
               { id: 'documents', label: 'Documents', icon: '▤' },
+              ...(session.user.role === 'admin'
+                ? [{ id: 'members', label: 'Members', icon: '♧' }]
+                : []),
             ]}
             active={view}
             onChange={setView}
@@ -71,6 +75,9 @@ function Workspace({ session, onSignOut }: { session: Session; onSignOut: () => 
           <div hidden={view !== 'documents'}>
             <DocumentsPanel api={api} isAdmin={session.user.role === 'admin'} onCount={setCount} />
           </div>
+          {session.user.role === 'admin' && view === 'members' && (
+            <MembersPanel api={api} currentUser={session.user} />
+          )}
         </main>
       </div>
       <footer className="px-2 py-5 text-[10px] text-muted">

@@ -3,63 +3,13 @@ import { AIMotion, Badge, Button, Card, Eyebrow } from '@portfolio/porcelain-azu
 import { ApiClient, ApiError, errorMessage, isCancelled } from '../api/client';
 import type { DocumentLimits, DocumentRecord } from '../api/types';
 import { Feedback } from './Feedback';
+import { ConfirmationDialog } from './ConfirmationDialog';
 const sizeLabel = (bytes: number) =>
   bytes >= 1024 * 1024
     ? `${Math.round((bytes / 1024 / 1024) * 10) / 10} MB`
     : bytes >= 1024
       ? `${Math.round((bytes / 1024) * 10) / 10} KB`
       : `${bytes} bytes`;
-function DeleteDialog({
-  document,
-  busy,
-  error,
-  uncertain,
-  onCancel,
-  onDelete,
-}: {
-  document: DocumentRecord;
-  busy: boolean;
-  error: string;
-  uncertain: boolean;
-  onCancel: () => void;
-  onDelete: () => void;
-}) {
-  const ref = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    const dialog = ref.current!;
-    dialog.showModal();
-    return () => {
-      if (dialog.open) dialog.close();
-    };
-  }, []);
-  return (
-    <dialog
-      ref={ref}
-      aria-labelledby="delete-title"
-      onCancel={(event) => {
-        event.preventDefault();
-        if (!busy) onCancel();
-      }}
-      className="m-auto w-[calc(100%_-_2rem)] max-w-md rounded-xl border border-line bg-surface p-6 text-ink shadow-xl"
-    >
-      <h2 id="delete-title" className="text-xl font-bold">
-        Delete this document?
-      </h2>
-      <p className="my-4 break-words text-sm leading-6 text-muted">
-        “{document.title}” and its indexed excerpts will be removed from future answers.
-      </p>
-      {error && <Feedback error>{error}</Feedback>}
-      <div className="mt-5 flex justify-end gap-2">
-        <Button variant="secondary" disabled={busy} onClick={onCancel} autoFocus>
-          {uncertain ? 'Close and refresh' : 'Keep document'}
-        </Button>
-        <Button loading={busy} disabled={uncertain} onClick={onDelete}>
-          {busy ? 'Deleting…' : 'Delete document'}
-        </Button>
-      </div>
-    </dialog>
-  );
-}
 export function DocumentsPanel({
   api,
   isAdmin,
@@ -309,8 +259,11 @@ export function DocumentsPanel({
         </ul>
       )}
       {confirm && (
-        <DeleteDialog
-          document={confirm}
+        <ConfirmationDialog
+          title="Delete this document?"
+          confirmLabel="Delete document"
+          cancelLabel="Keep document"
+          busyLabel="Deleting…"
           busy={deleting}
           error={deleteError}
           uncertain={uncertain}
@@ -320,8 +273,10 @@ export function DocumentsPanel({
               if (uncertain) void load();
             }
           }}
-          onDelete={() => void remove()}
-        />
+          onConfirm={() => void remove()}
+        >
+          “{confirm.title}” and its indexed excerpts will be removed from future answers.
+        </ConfirmationDialog>
       )}
     </section>
   );

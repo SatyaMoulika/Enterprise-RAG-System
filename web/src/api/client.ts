@@ -1,5 +1,7 @@
 import type {
   Answer,
+  Member,
+  CreateMemberPayload,
   DocumentLimits,
   DocumentRecord,
   RegisterPayload,
@@ -142,6 +144,18 @@ export class ApiClient {
   }
   removeDocument(id: number, signal?: AbortSignal) {
     return this.request<{ message: string }>(`/documents/${id}`, { method: 'DELETE', signal });
+  }
+  members(signal?: AbortSignal) {
+    return this.request<Member[]>('/users/get_all_users', { signal });
+  }
+  createMember(body: CreateMemberPayload, signal?: AbortSignal) {
+    return this.request<Member>('/users/create_user', { method: 'POST', body, signal });
+  }
+  removeMember(id: number, signal?: AbortSignal) {
+    return this.request<{ message: string }>(`/users/delete_user/${id}`, {
+      method: 'DELETE',
+      signal,
+    });
   }
   ask(question: string, signal?: AbortSignal) {
     return this.request<Answer>('/chat/generate', { method: 'POST', body: { question }, signal });

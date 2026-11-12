@@ -29,6 +29,7 @@ Tests use mocked HTTP responses to exercise the real application components, rol
 
 - Register a new workspace or sign in to an existing account. The token is accepted only after `/users/me` succeeds.
 - Session tokens, selected files and conversations stay in memory; no browser storage or cookies are used for credentials. Reload/sign-out clears the session and conversation.
+- Administrators have a Members page for account creation, listing/search and confirmed removal. Initial-password fields clear after submission; current-account removal is disabled.
 - Administrators can upload supported documents and confirm deletion. Members can browse and ask questions. The API remains the authority for permissions.
 - Upload rules come from authenticated `/documents/limits`; client checks improve feedback, while the API enforces actual file/content limits.
 - The document list uses real server records. “Stored” is not a claim about old migrated documents being searchable; the root migration/re-indexing guidance still applies.

@@ -2,12 +2,13 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
-import type { DocumentRecord } from './api/types';
+import type { DocumentRecord, Member } from './api/types';
 const json = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
     status,
     headers: { 'Content-Type': 'application/json' },
   });
+let members: Member[];
 let docs: DocumentRecord[],
   role: 'admin' | 'employee',
   calls: { path: string; options: RequestInit }[];
@@ -15,6 +16,16 @@ let customize:
   ((path: string, options: RequestInit) => Response | Promise<Response> | undefined) | undefined;
 beforeEach(() => {
   docs = [];
+  members = [
+    {
+      id: 1,
+      email: 'owner@example.com',
+      role: 'admin',
+      enterprise_id: 7,
+      is_active: true,
+      created_at: '2026-11-12T09:00:00Z',
+    },
+  ];
   role = 'admin';
   calls = [];
   customize = undefined;
@@ -29,6 +40,24 @@ beforeEach(() => {
         return json({ access_token: 'test-session', token_type: 'bearer' });
       if (path === '/api/users/me')
         return json({ id: 1, email: 'owner@example.com', role, enterprise_id: 7, is_active: true });
+      if (path === '/api/users/get_all_users') return json(members);
+      if (path === '/api/users/create_user') {
+        const values = JSON.parse(String(options.body));
+        const member: Member = {
+          id: Math.max(0, ...members.map((m) => m.id)) + 1,
+          email: values.email,
+          role: values.role,
+          enterprise_id: 7,
+          is_active: true,
+          created_at: '2026-11-12T09:00:00Z',
+        };
+        members = [...members, member];
+        return json(member);
+      }
+      if (path === '/api/users/delete_user/2' && options.method === 'DELETE') {
+        members = members.filter((m) => m.id !== 2);
+        return json({ message: 'deleted' });
+      }
       if (path === '/api/documents/list') return json(docs);
       if (path === '/api/documents/limits')
         return json({ allowed_extensions: ['.pdf', '.txt'], max_upload_bytes: 10 * 1024 * 1024 });
@@ -306,4 +335,124 @@ it('blocks another delete after a gateway timeout until the list is refreshed', 
   await user.click(within(modal).getByRole('button', { name: 'Close and refresh' }));
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   expect(calls.filter((c) => c.options.method === 'DELETE')).toHaveLength(1);
+});
+
+it('offers Members to administrators and creates a real account through the API', async () => {
+  const user = await signIn();
+  await user.click(screen.getByRole('button', { name: 'Members' }));
+  await screen.findByRole('heading', { name: 'Your workspace team.' });
+  await user.type(screen.getByLabelText('Member email'), 'staff@example.com');
+  await user.type(screen.getByLabelText('Initial password'), 'initial password');
+  await user.click(screen.getByRole('button', { name: 'Add member ↗' }));
+  expect(await screen.findByRole('heading', { name: 'staff@example.com' })).toBeInTheDocument();
+  expect(screen.getByLabelText('Initial password')).toHaveValue('');
+  expect(calls.filter((c) => c.path === '/api/users/create_user')).toHaveLength(1);
+  expect(
+    JSON.parse(String(calls.find((c) => c.path === '/api/users/create_user')?.options.body)),
+  ).toEqual({ email: 'staff@example.com', password: 'initial password', role: 'employee' });
+});
+it('does not expose Members to ordinary workspace members', async () => {
+  role = 'employee';
+  await signIn();
+  expect(screen.queryByRole('button', { name: 'Members' })).not.toBeInTheDocument();
+  expect(calls.filter((c) => c.path === '/api/users/get_all_users')).toHaveLength(0);
+});
+it('lists real roles and protects the signed-in account from removal', async () => {
+  const user = await signIn();
+  await user.click(screen.getByRole('button', { name: 'Members' }));
+  await screen.findByRole('heading', { name: 'owner@example.com' });
+  expect(screen.getByRole('button', { name: 'Remove owner@example.com' })).toBeDisabled();
+  expect(screen.getByText('You')).toBeInTheDocument();
+});
+it('requires confirmation before removing a member and refreshes the list', async () => {
+  members.push({
+    id: 2,
+    email: 'staff@example.com',
+    role: 'employee',
+    enterprise_id: 7,
+    is_active: true,
+    created_at: '2026-11-12T09:00:00Z',
+  });
+  const user = await signIn();
+  await user.click(screen.getByRole('button', { name: 'Members' }));
+  await user.click(await screen.findByRole('button', { name: 'Remove staff@example.com' }));
+  expect(calls.filter((c) => c.path === '/api/users/delete_user/2')).toHaveLength(0);
+  await user.click(
+    within(screen.getByRole('dialog')).getByRole('button', { name: 'Remove member' }),
+  );
+  await waitFor(() =>
+    expect(screen.queryByRole('heading', { name: 'staff@example.com' })).not.toBeInTheDocument(),
+  );
+  expect(calls.filter((c) => c.path === '/api/users/delete_user/2')).toHaveLength(1);
+});
+it('leaves a member intact when removal is cancelled', async () => {
+  members.push({
+    id: 2,
+    email: 'staff@example.com',
+    role: 'employee',
+    enterprise_id: 7,
+    is_active: true,
+    created_at: '2026-11-12T09:00:00Z',
+  });
+  const user = await signIn();
+  await user.click(screen.getByRole('button', { name: 'Members' }));
+  await user.click(await screen.findByRole('button', { name: 'Remove staff@example.com' }));
+  await user.click(screen.getByRole('button', { name: 'Keep member' }));
+  expect(calls.filter((c) => c.path === '/api/users/delete_user/2')).toHaveLength(0);
+});
+it('shows duplicate-account errors and clears the password', async () => {
+  customize = (path) =>
+    path === '/api/users/create_user'
+      ? json({ detail: 'An account already uses this email' }, 409)
+      : undefined;
+  const user = await signIn();
+  await user.click(screen.getByRole('button', { name: 'Members' }));
+  await user.type(screen.getByLabelText('Member email'), 'staff@example.com');
+  await user.type(screen.getByLabelText('Initial password'), 'initial password');
+  await user.click(screen.getByRole('button', { name: 'Add member ↗' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('already uses this email');
+  expect(screen.getByLabelText('Initial password')).toHaveValue('');
+});
+it('blocks repeating an uncertain account creation until the list is refreshed', async () => {
+  customize = (path) =>
+    path === '/api/users/create_user' ? Promise.reject(new TypeError('network lost')) : undefined;
+  const user = await signIn();
+  await user.click(screen.getByRole('button', { name: 'Members' }));
+  await user.type(screen.getByLabelText('Member email'), 'staff@example.com');
+  await user.type(screen.getByLabelText('Initial password'), 'initial password');
+  await user.click(screen.getByRole('button', { name: 'Add member ↗' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('uncertain');
+  expect(screen.getByRole('button', { name: 'Add member ↗' })).toBeDisabled();
+  expect(screen.getByLabelText('Initial password')).toHaveValue('');
+  await user.click(screen.getByRole('button', { name: 'Refresh members' }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Add member ↗' })).toBeEnabled());
+  expect(calls.filter((c) => c.path === '/api/users/create_user')).toHaveLength(1);
+});
+it('lets administrators assign the administrator role explicitly', async () => {
+  const user = await signIn();
+  await user.click(screen.getByRole('button', { name: 'Members' }));
+  await user.type(screen.getByLabelText('Member email'), 'admin@example.com');
+  await user.type(screen.getByLabelText('Initial password'), 'initial password');
+  await user.selectOptions(screen.getByLabelText('Account role'), 'admin');
+  await user.click(screen.getByRole('button', { name: 'Add member ↗' }));
+  await screen.findByRole('heading', { name: 'admin@example.com' });
+  expect(
+    JSON.parse(String(calls.find((c) => c.path === '/api/users/create_user')?.options.body)).role,
+  ).toBe('admin');
+});
+it('filters the account list by email', async () => {
+  members.push({
+    id: 2,
+    email: 'staff@example.com',
+    role: 'employee',
+    enterprise_id: 7,
+    is_active: true,
+    created_at: '2026-11-12T09:00:00Z',
+  });
+  const user = await signIn();
+  await user.click(screen.getByRole('button', { name: 'Members' }));
+  await screen.findByRole('heading', { name: 'staff@example.com' });
+  await user.type(screen.getByLabelText('Find a member'), 'staff');
+  expect(screen.queryByRole('heading', { name: 'owner@example.com' })).not.toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'staff@example.com' })).toBeInTheDocument();
 });

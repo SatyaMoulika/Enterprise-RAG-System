@@ -28,7 +28,7 @@ class UserRepository:
 
     @staticmethod
     def get_all(db: Session, enterprise_id: int):
-        return db.query(User).filter(User.enterprise_id == enterprise_id).all()
+        return db.query(User).filter(User.enterprise_id == enterprise_id).order_by(User.id).all()
 
     @staticmethod
     def delete(db: Session, user_id: int, enterprise_id: int):
