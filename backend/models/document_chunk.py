@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Text, ForeignKey, DateTime
+from sqlalchemy import JSON, Column, DateTime, ForeignKey, Integer, Text
 from sqlalchemy.sql import func
 
 from database.base import Base
@@ -14,5 +14,8 @@ class DocumentChunk(Base):
 
     chunk_text = Column(Text, nullable=False)
     chunk_index = Column(Integer)
+
+    embedding = Column(JSON, nullable=True)
+    embedding_model = Column(Text, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())

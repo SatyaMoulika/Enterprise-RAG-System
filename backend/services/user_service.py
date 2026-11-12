@@ -1,29 +1,24 @@
 from core.security import hash_password
-from repositories.user_repository import UserRepository
 from models.user import User
+from repositories.user_repository import UserRepository
 
 
 class UserService:
-
     @staticmethod
     def create_user(db, email, password, role, current_user):
 
         enterprise_id = current_user.enterprise_id
 
-        existing = UserRepository.get_by_email(
-            db,
-            email,
-            enterprise_id
-        )
+        existing = UserRepository.get_by_email(db, email)
 
         if existing:
-            raise Exception("User already exists in this enterprise")
+            raise ValueError("User already exists")
 
         user = User(
             email=email,
             hashed_password=hash_password(password),
             role=role,
-            enterprise_id=enterprise_id
+            enterprise_id=enterprise_id,
         )
 
         return UserRepository.create(db, user)

@@ -46,8 +46,7 @@ uploaded_file = st.file_uploader(
     "Choose file",
     type=[
         "pdf",
-        "txt",
-        "docx"
+        "txt"
     ]
 )
 

@@ -1,52 +1,59 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
+import bcrypt
+from argon2 import PasswordHasher
+from argon2.exceptions import InvalidHashError, VerificationError
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 from core.config import settings
 
-pwd_context = CryptContext(
-    schemes=["bcrypt"],
-    deprecated="auto"
-)
+_password_hasher = PasswordHasher()
 
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    return _password_hasher.hash(password)
 
 
 def verify_password(password: str, hashed: str) -> bool:
-    return pwd_context.verify(password, hashed)
+    # Preserve sign-in for existing bcrypt hashes; new passwords use Argon2id.
+    if hashed.startswith(("$2a$", "$2b$", "$2y$")):
+        raw = password.encode("utf-8")
+        if len(raw) > 72:
+            return False
+        try:
+            return bcrypt.checkpw(raw, hashed.encode("utf-8"))
+        except ValueError:
+            return False
+    try:
+        return _password_hasher.verify(hashed, password)
+    except (VerificationError, InvalidHashError):
+        return False
 
 
-def create_access_token(
-    data: dict,
-    expires_delta: timedelta | None = None
-):
-    to_encode = data.copy()
-
-    expire = datetime.now(timezone.utc) + (
-        expires_delta
-        or timedelta(
-            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
-        )
+def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
+    claims = data.copy()
+    now = datetime.now(UTC)
+    claims.update(
+        {
+            "iat": now,
+            "exp": now
+            + (
+                expires_delta
+                if expires_delta is not None
+                else timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+            ),
+        }
     )
-
-    to_encode.update({"exp": expire})
-
-    return jwt.encode(
-        to_encode,
-        settings.JWT_SECRET_KEY,
-        algorithm=settings.JWT_ALGORITHM
-    )
+    return jwt.encode(claims, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 
-def decode_access_token(token: str):
+def decode_access_token(token: str) -> dict:
     try:
         return jwt.decode(
             token,
             settings.JWT_SECRET_KEY,
-            algorithms=[settings.JWT_ALGORITHM]
+            algorithms=[settings.JWT_ALGORITHM],
+            options={"require_exp": True, "require_sub": True},
         )
-    except JWTError:
-        raise ValueError("Invalid token")
+    except JWTError as exc:
+        raise ValueError("Invalid token") from exc

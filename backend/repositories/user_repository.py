@@ -1,9 +1,9 @@
 from sqlalchemy.orm import Session
+
 from models.user import User
 
 
 class UserRepository:
-
     @staticmethod
     def get_by_email(db: Session, email: str, enterprise_id: int | None = None):
         query = db.query(User).filter(User.email == email)
@@ -23,9 +23,7 @@ class UserRepository:
     @staticmethod
     def get_by_id(db: Session, user_id: int, enterprise_id: int):
         return (
-            db.query(User)
-            .filter(User.id == user_id, User.enterprise_id == enterprise_id)
-            .first()
+            db.query(User).filter(User.id == user_id, User.enterprise_id == enterprise_id).first()
         )
 
     @staticmethod
@@ -34,10 +32,9 @@ class UserRepository:
 
     @staticmethod
     def delete(db: Session, user_id: int, enterprise_id: int):
-        user = db.query(User).filter(
-            User.id == user_id,
-            User.enterprise_id == enterprise_id
-        ).first()
+        user = (
+            db.query(User).filter(User.id == user_id, User.enterprise_id == enterprise_id).first()
+        )
 
         if not user:
             return False
