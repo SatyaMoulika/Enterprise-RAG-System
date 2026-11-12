@@ -23,6 +23,8 @@ services:
       DATABASE_URL: postgresql+psycopg://rag:${RAG_DB_PASSWORD:?Set RAG_DB_PASSWORD}@postgres:5432/rag
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Set JWT_SECRET_KEY in .env}
       OLLAMA_BASE_URL: http://ollama:11434
+      NO_PROXY: "${NO_PROXY:-127.0.0.1,localhost},postgres,ollama"
+      no_proxy: "${no_proxy:-127.0.0.1,localhost},postgres,ollama"
       OLLAMA_CHAT_MODEL: qwen2.5:3b
       EMBEDDING_BACKEND: ollama
       EMBEDDING_MODEL: all-minilm
@@ -36,6 +38,13 @@ services:
       postgres:
         condition: service_healthy
       ollama:
+        condition: service_started
+  web:
+    build: ./web
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      api:
         condition: service_started
 volumes:
   rag_postgres:
