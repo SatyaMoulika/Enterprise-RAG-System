@@ -74,6 +74,10 @@ Open `http://127.0.0.1:5173`. The Vite proxy keeps API requests on the same brow
 - Answers include `sources` (document IDs, kept for the old client) and structured `citations` (retrieved title, chunk and excerpt). These are retrieval provenance, **not proof that every generated claim is supported**. Evaluate grounding before public release.
 - HTTP provider calls have finite timeouts and sanitised errors. Importing the API never fetches model weights.
 
+## Answer formatting and excerpt boundaries
+
+Answers render safe Markdown, including headings, lists, code and tables. New uploads use sentence-aware chunks with a soft size target, whole-unit overlap and conservative PDF line-wrap cleanup. See [formatting and re-indexing notes](docs/answer-format-and-chunking.md). Re-upload affected documents and remove old copies to replace already-stored character slices.
+
 ## Existing data
 
 Do not blindly run the initial migration against an existing manually created schema. Back up the database first and compare it with migration `0001`. Only if it matches, explicitly stamp `0001` and upgrade to `0002`; otherwise reconcile the schema first. No existing database has been inspected or modified by this change.

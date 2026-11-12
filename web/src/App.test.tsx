@@ -179,12 +179,16 @@ describe('real-data workspace', () => {
   it('renders untrusted model text as text, not executable markup', async () => {
     customize = (path) =>
       path === '/api/chat/generate'
-        ? json({ answer: '<img src=x onerror=alert(1)>', sources: [], citations: [] })
+        ? json({
+            answer: 'Safe answer.\n\n<img src=x onerror=alert(1)>',
+            sources: [],
+            citations: [],
+          })
         : undefined;
     const user = await signIn();
     await user.type(screen.getByLabelText('Your question'), 'Question');
     await user.click(screen.getByRole('button', { name: /Ask question/ }));
-    expect(await screen.findByText('<img src=x onerror=alert(1)>')).toBeInTheDocument();
+    expect(await screen.findByText('Safe answer.')).toBeInTheDocument();
     expect(document.querySelector('img[src="x"]')).toBeNull();
   });
   it('keeps an answer-provider failure separate from an answer', async () => {
