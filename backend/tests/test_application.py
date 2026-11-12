@@ -240,3 +240,11 @@ def test_auth_is_required(client):
 
 def test_no_provider_call_for_health(client):
     assert client.get("/health").json() == {"status": "healthy"}
+
+
+def test_upload_limits_are_authenticated_and_follow_configuration(client, account, monkeypatch):
+    monkeypatch.setattr(settings, "MAX_UPLOAD_BYTES", 12345)
+    assert client.get("/documents/limits").status_code == 401
+    response = client.get("/documents/limits", headers=account)
+    assert response.status_code == 200
+    assert response.json() == {"allowed_extensions": [".pdf", ".txt"], "max_upload_bytes": 12345}
