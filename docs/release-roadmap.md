@@ -12,7 +12,7 @@ An administrator creates a workspace and uploads a small set of documents. Works
 - Isolated automated coverage and local Docker deployment configuration.
 
 ## Milestone 2 — reliable product workflow
-- Replace the transitional Streamlit client with React/TypeScript/Vite and the shared Porcelain & Azure components; azure is this project's accent.
+- The React/TypeScript/Vite workflow now uses the shared Porcelain & Azure package in `web/`; azure is this project's accent. See `docs/react-workspace.md` for behaviour and verification. Real-model/browser acceptance remains open.
 - Sign-in, workspace navigation, upload status, document deletion and a question/answer screen with expandable source excerpts and explicit busy/error/empty states.
 - Ingestion jobs and persisted status with cancellation/failure recovery, resource-limited PDF parsing and bounded concurrency.
 - Model-based evaluation: answerable/unanswerable questions, retrieval recall, unsupported-claim checks, citation coverage and adversarial document instructions. Report actual measured results.

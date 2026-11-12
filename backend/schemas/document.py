@@ -13,3 +13,8 @@ class DocumentResponse(BaseModel):
 
 class DeleteDocumentResponse(BaseModel):
     message: str
+
+
+class DocumentLimits(BaseModel):
+    allowed_extensions: list[str]
+    max_upload_bytes: int

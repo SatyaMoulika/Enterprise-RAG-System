@@ -2,7 +2,7 @@
 
 A workspace-scoped document assistant: register an enterprise, upload UTF-8 text or text-based PDFs, ask questions, and inspect the retrieved excerpts that support an answer. FastAPI, PostgreSQL and a configurable Ollama inference service.
 
-This branch establishes a tested backend foundation. It is **not yet a public production release**. The existing Streamlit interface is a transitional client; a Porcelain & Azure React interface is planned after the backend contract stabilises.
+This branch establishes a tested backend foundation. It is **not yet a public production release**. The active interface is now a Porcelain & Azure React workspace in `web/`. The original Streamlit client remains as a transitional reference. Public-production release gates still apply.
 
 ## First local run
 
@@ -17,7 +17,7 @@ docker compose exec ollama ollama pull all-minilm
 docker compose exec ollama ollama pull qwen2.5:3b
 ```
 
-3. Open `http://localhost:8000/docs`. Register with `/auth/register`, use the returned bearer token, upload a document, then call `/chat/generate`.
+3. Open `http://127.0.0.1:8080` for the React workspace. Create a workspace, upload a document, and ask a question. Backend API docs remain at `http://localhost:8000/docs`.
 
 The API is bound to localhost. Database and inference ports are not exposed. The API image build and startup were verified against disposable PostgreSQL. Actual model inference must still be verified on the deployment host; the unit/integration tests substitute provider responses and never download weights.
 
@@ -40,7 +40,7 @@ The existing Streamlit client remains under `frontend/`. Install its optional de
 uv run --directory backend --extra legacy-ui streamlit run ../frontend/app.py
 ```
 
-Set `RAG_API_BASE_URL` for a nondefault API origin. Its requests have finite timeouts. A React frontend and deployment-wide request throttling are follow-up work.
+Set `RAG_API_BASE_URL` for a nondefault API origin. Its requests have finite timeouts. For the active React interface, see [web/README.md](web/README.md). Deployment-wide request throttling remains follow-up work.
 
 ## Verify
 
@@ -52,6 +52,17 @@ uv run --directory backend --locked ruff format --check .
 ```
 
 Tests use fresh disposable SQLite databases and fake inference outputs. They do not open a development database, call a paid provider, or load model weights. A separate disposable PostgreSQL smoke check and container startup also passed; see [verification details](docs/verification.md). Real inference and deployment-host verification remain release gates.
+
+## React frontend
+
+```sh
+cd web
+npm ci
+npm run dev
+# In a separate terminal, start the backend as above.
+```
+
+Open `http://127.0.0.1:5173`. The Vite proxy keeps API requests on the same browser origin. Run `npm test` and `npm run build` from `web/` for frontend verification. See [the React architecture notes](docs/react-workspace.md) for session, component and error contracts.
 
 ## Key behaviour
 

@@ -1,0 +1,46 @@
+@import '@portfolio/porcelain-azure/styles.css';
+@import 'tailwindcss';
+@theme inline {
+  --color-canvas: var(--pa-canvas);
+  --color-surface: var(--pa-surface);
+  --color-soft: var(--pa-soft);
+  --color-ink: var(--pa-ink);
+  --color-muted: var(--pa-muted);
+  --color-line: var(--pa-line);
+  --color-azure: var(--pa-azure);
+  --color-teal: var(--pa-teal);
+  --color-violet: var(--pa-violet);
+  --font-sans: var(--pa-font-sans);
+  --font-editorial: var(--pa-font-editorial);
+}
+body {
+  margin: 0;
+}
+button,
+a,
+textarea,
+input,
+summary {
+  outline-offset: 4px;
+}
+button:focus-visible,
+a:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--pa-azure);
+}
+html {
+  scroll-behavior: smooth;
+}
+dialog::backdrop {
+  background: #24344766;
+}
+::selection {
+  background: #d5e9fa;
+  color: #243447;
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
