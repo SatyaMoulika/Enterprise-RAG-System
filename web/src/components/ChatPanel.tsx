@@ -3,6 +3,7 @@ import { AIMotion, Button, Card, Eyebrow } from '@portfolio/porcelain-azure';
 import { ApiClient, errorMessage, isCancelled } from '../api/client';
 import type { Answer } from '../api/types';
 import { Feedback } from './Feedback';
+import { MarkdownAnswer } from './MarkdownAnswer';
 interface Turn {
   id: number;
   question: string;
@@ -105,9 +106,7 @@ export function ChatPanel({
                 <Eyebrow>Document answer</Eyebrow>
                 {turn.result ? (
                   <>
-                    <p className="mt-3 whitespace-pre-wrap text-sm leading-7">
-                      {turn.result.answer}
-                    </p>
+                    <MarkdownAnswer>{turn.result.answer}</MarkdownAnswer>
                     {turn.result.citations.length > 0 && (
                       <div className="mt-5 space-y-2 border-t border-line pt-4">
                         <p className="text-[11px] text-muted">

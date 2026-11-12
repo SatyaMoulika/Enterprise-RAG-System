@@ -4,6 +4,7 @@ from pypdf import PdfReader
 
 from core.config import settings
 from core.errors import InvalidDocument, UploadTooLarge
+from services.pdf_text import normalize_pdf_text
 
 
 class LoaderService:
@@ -25,7 +26,7 @@ class LoaderService:
                     if size > settings.MAX_TEXT_CHARACTERS:
                         raise UploadTooLarge("Extracted document exceeds the text limit")
                     parts.append(part)
-                text = "\n".join(parts)
+                text = normalize_pdf_text("\n".join(parts))
             else:
                 raise InvalidDocument("Only UTF-8 .txt and text-based .pdf files are supported")
         except (InvalidDocument, UploadTooLarge):

@@ -13,7 +13,7 @@ Register/sign in → administrator uploads a text/PDF document → indexing succ
 The only backend contract addition is authenticated `GET /documents/limits`. It exposes supported suffixes and configured upload bytes, not provider credentials or server filesystem paths. No database migration is required for this milestone.
 
 ## Privacy and error behaviour
-No token or conversation is written to browser storage. Protected 401 responses clear the workspace. Password forms and raw validation inputs are not logged. Model answers and document excerpts are plain React text nodes. Upload/delete transport failures are shown as uncertain results, without automatically issuing another mutation.
+No token or conversation is written to browser storage. Protected 401 responses clear the workspace. Password forms and raw validation inputs are not logged. Model answers use safe Markdown with raw HTML disabled; document excerpts remain plain React text nodes. See `docs/answer-format-and-chunking.md` for the rendering and sentence-aware indexing contracts. Upload/delete transport failures are shown as uncertain results, without automatically issuing another mutation.
 
 The current backend has expiring bearer tokens and no refresh session. Reload requires sign-in again. A future persistent session should be designed with secure server-side refresh cookies and CSRF protection, rather than storing a long-lived token in localStorage.
 

@@ -32,7 +32,7 @@ Tests use mocked HTTP responses to exercise the real application components, rol
 - Administrators can upload supported documents and confirm deletion. Members can browse and ask questions. The API remains the authority for permissions.
 - Upload rules come from authenticated `/documents/limits`; client checks improve feedback, while the API enforces actual file/content limits.
 - The document list uses real server records. “Stored” is not a claim about old migrated documents being searchable; the root migration/re-indexing guidance still applies.
-- Answers include expandable source excerpts. All model/document text is rendered as text, never injected HTML or unsanitised Markdown.
+- Answers include expandable source excerpts. Model answers use safe Markdown (including GFM tables); raw HTML is skipped and remote images are not fetched. Source excerpts and user questions remain plain text.
 - Request failure is distinct from an answer. Upload/delete network failures can leave an uncertain result: inspect the refreshed document list before manually repeating. No mutation is automatically retried.
 - Session expiry returns to sign-in. In-flight requests are aborted on component teardown; browser cancellation does not guarantee cancellation of backend ingestion/inference.
 - Questions currently run independently; the displayed conversation is not sent as model context.

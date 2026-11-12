@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     MAX_DOCUMENT_CHUNKS: int = Field(default=2000, ge=1)
     MAX_RETRIEVAL_CHUNKS: int = Field(default=10_000, ge=1)
     CHUNK_SIZE: int = Field(default=500, ge=100, le=4000)
+    CHUNK_MAX_CHARACTERS: int = Field(default=4000, ge=100, le=16000)
     CHUNK_OVERLAP: int = Field(default=50, ge=0, lt=100)
     OLLAMA_BASE_URL: str = "http://127.0.0.1:11434"
     OLLAMA_CHAT_MODEL: str = "qwen2.5:3b"
@@ -27,6 +28,12 @@ class Settings(BaseSettings):
     EMBEDDING_DIMENSION: int = Field(default=384, ge=1)
     PROVIDER_TIMEOUT_SECONDS: float = Field(default=90, gt=0, le=300)
     CORS_ORIGINS: list[str] = []
+
+    @model_validator(mode="after")
+    def validate_chunk_limits(self):
+        if self.CHUNK_MAX_CHARACTERS < self.CHUNK_SIZE:
+            raise ValueError("CHUNK_MAX_CHARACTERS must be at least CHUNK_SIZE")
+        return self
 
 
 settings = Settings()
