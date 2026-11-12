@@ -107,20 +107,16 @@ def reciprocal_rank_fusion(rankings: list[list[int]], constant: int = 60) -> lis
     return sorted(scores, key=lambda identity: (-scores[identity], identity))
 
 
-def retrieve_ranked(
+def rank_candidates(
     chunks: list[SearchChunk],
     question: str,
     query: list[float] | None,
     *,
     strategy: Strategy = "dense",
-    top_k: int = 5,
     candidate_k: int = 20,
-    context_characters: int = 24_000,
 ) -> list[SearchChunk]:
-    if strategy not in {"dense", "bm25", "hybrid"}:
-        raise ValueError("Unsupported retrieval strategy")
-    if top_k < 1 or candidate_k < top_k or context_characters < 1:
-        raise ValueError("Invalid retrieval limits")
+    if strategy not in {"dense", "bm25", "hybrid"} or candidate_k < 1:
+        raise ValueError("Invalid retrieval strategy or candidate limit")
     dense = dense_rank(chunks, query or [], candidate_k) if strategy != "bm25" else []
     lexical = bm25_rank(chunks, question, candidate_k) if strategy != "dense" else []
     ranking = (
@@ -131,14 +127,20 @@ def retrieve_ranked(
         else lexical
     )
     by_id = {chunk.id: chunk for chunk in chunks}
+    return [by_id[identity] for identity in ranking[:candidate_k]]
+
+
+def select_context(
+    ranked: list[SearchChunk], *, top_k: int = 5, context_characters: int = 24000
+) -> list[SearchChunk]:
+    if top_k < 1 or context_characters < 1:
+        raise ValueError("Invalid context limits")
     selected: list[SearchChunk] = []
     seen = set()
-    for identity in ranking:
-        chunk = by_id[identity]
+    for chunk in ranked:
         key = (chunk.document_id, " ".join(chunk.chunk_text.casefold().split()))
         if key in seen:
             continue
-        # Budget the serialized prompt context, preserving whole excerpt boundaries.
         if (
             len(PromptService.build_context([c.context() for c in [*selected, chunk]]))
             > context_characters
@@ -149,3 +151,21 @@ def retrieve_ranked(
         if len(selected) == top_k:
             break
     return selected
+
+
+def retrieve_ranked(
+    chunks: list[SearchChunk],
+    question: str,
+    query: list[float] | None,
+    *,
+    strategy: Strategy = "dense",
+    top_k: int = 5,
+    candidate_k: int = 20,
+    context_characters: int = 24000,
+) -> list[SearchChunk]:
+    if candidate_k < top_k:
+        raise ValueError("Invalid retrieval limits")
+    candidates = rank_candidates(
+        chunks, question, query, strategy=strategy, candidate_k=candidate_k
+    )
+    return select_context(candidates, top_k=top_k, context_characters=context_characters)

@@ -78,6 +78,10 @@ Open `http://127.0.0.1:5173`. The Vite proxy keeps API requests on the same brow
 
 Dense search remains the default. Opt-in BM25/hybrid retrieval, whole-excerpt context budgeting and a labelled synthetic evaluation runner are now available. See [the retrieval optimization guide](docs/retrieval-optimization.md) for measured fixture results, a real-model comparison command and switching strategies without re-indexing.
 
+## Organisation-policy answer evaluation
+
+Compare the normal five-excerpt answer with a compact two-excerpt answer using the existing Ollama models, then review factual correctness, source support and refusal. An optional cross-encoder experiment remains off by default. See [the answer evaluation guide](docs/answer-evaluation.md) for a small first run, review instructions and the separate optional model setup.
+
 ## Organisation members
 
 Administrators can now open **Members** in the React sidebar to add, list, search and remove workspace accounts. Members and administrators are selectable roles at creation. The current account cannot remove itself, and old tokens cannot regain access when an email is re-created. Sign in again after updating; no database reset is needed. See [member-management behaviour and verification](docs/workspace-members.md).
