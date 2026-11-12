@@ -1,6 +1,3 @@
-import heapq
-import math
-
 from sqlalchemy import select
 
 from core.config import settings
@@ -8,12 +5,13 @@ from core.errors import RetrievalCapacityExceeded
 from models.document import Document
 from models.document_chunk import DocumentChunk
 from services.embedding_service import EmbeddingService
+from services.search import SearchChunk, retrieve_ranked
 
 
 class RetrievalService:
     @classmethod
-    def retrieve(cls, question, enterprise_id, db, top_k=5):
-        # Scope BEFORE ranking. Other tenants cannot displace this tenant's neighbours.
+    def retrieve(cls, question, enterprise_id, db, top_k=None):
+        # Authorization/model filtering precedes BOTH rankers. BM25 statistics are tenant-local.
         rows = db.execute(
             select(DocumentChunk, Document.title)
             .join(Document, Document.id == DocumentChunk.document_id)
@@ -31,33 +29,30 @@ class RetrievalService:
             raise RetrievalCapacityExceeded("Workspace exceeds the current retrieval capacity")
         if not rows:
             return []
-        query = EmbeddingService.embed_query(question)
-        query_norm = math.sqrt(sum(x * x for x in query))
-        scored = []
-        for chunk, title in rows:
-            vector = chunk.embedding
-            if (
-                not isinstance(vector, list)
-                or len(vector) != len(query)
-                or not all(isinstance(x, (int, float)) and math.isfinite(x) for x in vector)
-            ):
-                continue
-            norm = math.sqrt(sum(x * x for x in vector))
-            if not norm or not query_norm:
-                continue
-            score = sum(a * b for a, b in zip(query, vector, strict=True)) / (query_norm * norm)
-            scored.append(
-                (
-                    score,
-                    chunk.id,
-                    {
-                        "document_id": chunk.document_id,
-                        "title": title,
-                        "chunk_index": chunk.chunk_index,
-                        "chunk_text": chunk.chunk_text,
-                    },
-                )
+        query = (
+            None
+            if settings.RETRIEVAL_STRATEGY == "bm25"
+            else EmbeddingService.embed_query(question)
+        )
+        chunks = [
+            SearchChunk(
+                id=c.id,
+                document_id=c.document_id,
+                title=title,
+                chunk_index=c.chunk_index,
+                chunk_text=c.chunk_text,
+                embedding=c.embedding,
             )
-        return [
-            item[2] for item in heapq.nlargest(top_k, scored, key=lambda item: (item[0], -item[1]))
+            for c, title in rows
         ]
+        limit = settings.RETRIEVAL_TOP_K if top_k is None else top_k
+        result = retrieve_ranked(
+            chunks,
+            question,
+            query,
+            strategy=settings.RETRIEVAL_STRATEGY,
+            top_k=limit,
+            candidate_k=max(settings.RETRIEVAL_CANDIDATES, limit),
+            context_characters=settings.RETRIEVAL_CONTEXT_CHARACTERS,
+        )
+        return [chunk.context() for chunk in result]

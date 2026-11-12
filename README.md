@@ -74,6 +74,10 @@ Open `http://127.0.0.1:5173`. The Vite proxy keeps API requests on the same brow
 - Answers include `sources` (document IDs, kept for the old client) and structured `citations` (retrieved title, chunk and excerpt). These are retrieval provenance, **not proof that every generated claim is supported**. Evaluate grounding before public release.
 - HTTP provider calls have finite timeouts and sanitised errors. Importing the API never fetches model weights.
 
+## Retrieval strategies and evaluation
+
+Dense search remains the default. Opt-in BM25/hybrid retrieval, whole-excerpt context budgeting and a labelled synthetic evaluation runner are now available. See [the retrieval optimization guide](docs/retrieval-optimization.md) for measured fixture results, a real-model comparison command and switching strategies without re-indexing.
+
 ## Organisation members
 
 Administrators can now open **Members** in the React sidebar to add, list, search and remove workspace accounts. Members and administrators are selectable roles at creation. The current account cannot remove itself, and old tokens cannot regain access when an email is re-created. Sign in again after updating; no database reset is needed. See [member-management behaviour and verification](docs/workspace-members.md).
