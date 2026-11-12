@@ -35,3 +35,12 @@ export interface Answer {
   sources: number[];
   citations: Citation[];
 }
+
+export interface Member extends User {
+  created_at: string;
+}
+export interface CreateMemberPayload {
+  email: string;
+  password: string;
+  role: 'admin' | 'employee';
+}
