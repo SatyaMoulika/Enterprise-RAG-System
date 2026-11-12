@@ -1,0 +1,30 @@
+{
+  "description": "Synthetic, manually labelled regression examples. Not a production quality benchmark or a sample of private user documents.",
+  "chunks": [
+    {"id":1,"document_id":1,"title":"healthcare-governance.txt","chunk_index":0,"chunk_text":"Healthcare AI reviews must consider FDA requirements, the EU AI Act, WHO guidance, privacy, bias and accountability."},
+    {"id":2,"document_id":2,"title":"employee-handbook.txt","chunk_index":0,"chunk_text":"Policy PTO-2026 grants full-time employees 20 days of paid annual leave. Unused leave carries over for five days."},
+    {"id":3,"document_id":3,"title":"incident-response.txt","chunk_index":0,"chunk_text":"SLA P1 incidents require an initial response within 15 minutes. P2 incidents require an initial response within four hours."},
+    {"id":4,"document_id":4,"title":"account-security.txt","chunk_index":0,"chunk_text":"JWT sessions use HS256 and an account-specific stamp. Removing a member invalidates future authenticated requests. Recreating an email does not reactivate old tokens."},
+    {"id":5,"document_id":5,"title":"billing-policy.txt","chunk_index":0,"chunk_text":"Invoice INV-042 qualifies for a refund within 30 days of payment. Refund requests require the invoice identifier."},
+    {"id":6,"document_id":6,"title":"data-retention.txt","chunk_index":0,"chunk_text":"Application logs are retained for 30 days. Encrypted database backups are retained for 90 days."},
+    {"id":7,"document_id":7,"title":"workspace-guide.txt","chunk_index":0,"chunk_text":"Administrators add Member and Administrator accounts in the Members page. Members can browse documents and ask questions, but cannot manage other accounts."},
+    {"id":8,"document_id":8,"title":"model-hosting.txt","chunk_index":0,"chunk_text":"GPU model serving requires compatible CUDA drivers and enough VRAM. CPU inference is possible but may have higher response latency."},
+    {"id":9,"document_id":9,"title":"office-guide.txt","chunk_index":0,"chunk_text":"The office opens at nine in the morning and closes at six in the evening. Weekend access requires prior approval."},
+    {"id":10,"document_id":10,"title":"research-demo.txt","chunk_index":0,"chunk_text":"The polyp detection interface is a research demonstration. It is not for clinical decisions and does not provide a diagnosis."}
+  ],
+  "queries": [
+    {"id":"exact-policy","question":"How much leave does PTO-2026 allow?","relevant_ids":[2]},
+    {"id":"exact-invoice","question":"What is the refund window for INV-042?","relevant_ids":[5]},
+    {"id":"acronym-sla","question":"What is the SLA for a P1 incident?","relevant_ids":[3]},
+    {"id":"clinical-governance","question":"Which FDA, WHO and EU AI Act considerations apply to healthcare AI?","relevant_ids":[1]},
+    {"id":"account-removal","question":"Can old JWT tokens work after a member email is recreated?","relevant_ids":[4]},
+    {"id":"backup-retention","question":"How long are database backups retained?","relevant_ids":[6]},
+    {"id":"workspace-permissions","question":"Can a Member manage accounts?","relevant_ids":[7]},
+    {"id":"gpu-requirements","question":"What do GPU serving and CUDA need?","relevant_ids":[8]},
+    {"id":"paraphrase-opening","question":"When can staff first enter the building on a weekday?","relevant_ids":[9]},
+    {"id":"paraphrase-medical","question":"Is the detector suitable for diagnosing a patient?","relevant_ids":[10]},
+    {"id":"multiple-evidence","question":"What are the annual paid leave allowance and P1 response deadline?","relevant_ids":[2,3]},
+    {"id":"unanswerable-private","question":"What is the CEO private phone number?","relevant_ids":[]},
+    {"id":"unanswerable-finance","question":"What was the quarterly revenue in dollars?","relevant_ids":[]}
+  ]
+}

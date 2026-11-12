@@ -9,7 +9,7 @@ class ChatService:
         chunks = RetrievalService.retrieve(question=question, enterprise_id=enterprise_id, db=db)
         if not chunks:
             return {
-                "answer": "No indexed documents found. Upload a document before asking a question.",
+                "answer": "No usable excerpts were found for this question. Check your documents or try a more specific question.",
                 "sources": [],
                 "citations": [],
             }
