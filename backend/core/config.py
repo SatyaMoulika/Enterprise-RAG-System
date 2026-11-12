@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     MAX_TEXT_CHARACTERS: int = Field(default=500_000, ge=1)
     MAX_DOCUMENT_CHUNKS: int = Field(default=2000, ge=1)
     MAX_RETRIEVAL_CHUNKS: int = Field(default=10_000, ge=1)
+    RERANKER_MODE: Literal["none", "cross_encoder"] = "none"
+    RERANKER_MODEL: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
     RETRIEVAL_STRATEGY: Literal["dense", "bm25", "hybrid"] = "dense"
     RETRIEVAL_TOP_K: int = Field(default=5, ge=1, le=20)
     RETRIEVAL_CANDIDATES: int = Field(default=20, ge=1, le=100)

@@ -5,7 +5,8 @@ from core.errors import RetrievalCapacityExceeded
 from models.document import Document
 from models.document_chunk import DocumentChunk
 from services.embedding_service import EmbeddingService
-from services.search import SearchChunk, retrieve_ranked
+from services.reranking_service import rerank_chunks
+from services.search import SearchChunk, rank_candidates, select_context
 
 
 class RetrievalService:
@@ -46,13 +47,16 @@ class RetrievalService:
             for c, title in rows
         ]
         limit = settings.RETRIEVAL_TOP_K if top_k is None else top_k
-        result = retrieve_ranked(
+        candidates = rank_candidates(
             chunks,
             question,
             query,
             strategy=settings.RETRIEVAL_STRATEGY,
-            top_k=limit,
             candidate_k=max(settings.RETRIEVAL_CANDIDATES, limit),
-            context_characters=settings.RETRIEVAL_CONTEXT_CHARACTERS,
+        )
+        if settings.RERANKER_MODE == "cross_encoder":
+            candidates = rerank_chunks(question, candidates, settings.RERANKER_MODEL)
+        result = select_context(
+            candidates, top_k=limit, context_characters=settings.RETRIEVAL_CONTEXT_CHARACTERS
         )
         return [chunk.context() for chunk in result]

@@ -1,3 +1,4 @@
+from services.generation_protocol import NO_CONTEXT_ANSWER
 from services.llm_service import LLMService
 from services.prompt_service import PromptService
 from services.retrieval_service import RetrievalService
@@ -9,7 +10,7 @@ class ChatService:
         chunks = RetrievalService.retrieve(question=question, enterprise_id=enterprise_id, db=db)
         if not chunks:
             return {
-                "answer": "No usable excerpts were found for this question. Check your documents or try a more specific question.",
+                "answer": NO_CONTEXT_ANSWER,
                 "sources": [],
                 "citations": [],
             }
