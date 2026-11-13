@@ -107,3 +107,25 @@ Validation: 94 backend tests pass; Ruff lint/format checks pass. The default bac
 Automated tests cover report/review logic, failure handling, citation-marker checks, ranking before final top-k, authorization scope, optional model boundaries and unchanged default behaviour. Tests use provider/model doubles; they do not download the cross-encoder or generate real Ollama answers. No new correctness, faithfulness, refusal or re-ranking improvement score is claimed until actual reports are generated and reviewed.
 
 This adds no automatic evidence rejection, query rewriting or arbitrary similarity threshold. Those require a larger representative evaluation and separate calibration/holdout cases.
+
+## Follow-up after the first full policy review
+
+The first 17-question report found that compact context dropped the current leave policy in a comparison, the model falsely refused the email-token question despite having the answer, and both profiles refused instead of explaining that no resolution guarantee exists. Some answers also lost contract exceptions or numeric citations. Keep dense retrieval, five excerpts and re-ranking disabled while testing prompt changes.
+
+The shared application/evaluation prompt is now versioned as `policy-grounding-v2` in generated reports. It requests direct, concise answers, citations beside factual claims, preserved limits/exceptions, explicit negative policy answers, partial answers when appropriate, and current versus archived policy handling. These instructions are not an enforcement layer or proof of improved model output. Older reports without `prompt_version` used the original prompt.
+
+After pulling and rebuilding the API, run the full comparison twice with the same models and explicit temperature. Save each result separately:
+
+```sh
+docker compose -p rag-updated exec -T api .venv/bin/python scripts/evaluate_answers.py \
+  --allow-inference --temperature 0 --profiles baseline,compact \
+  > policy-answer-review-v2-run1.json
+
+docker compose -p rag-updated exec -T api .venv/bin/python scripts/evaluate_answers.py \
+  --allow-inference --temperature 0 --profiles baseline,compact \
+  > policy-answer-review-v2-run2.json
+```
+
+Review all cases, especially `contractor-leave`, `email-reuse`, `leave-comparison`, `resolution-time`, and missing citations. Temperature zero reduces sampling variability but does not guarantee reproducibility. The earlier report used provider-default sampling; comparisons with it change both prompt and temperature. Prompt length also increases input tokens. Compare correctness before optimizing token counts; timing includes model/cache/order effects. No real-model improvement is claimed by automated tests.
+
+Once prompt behaviour is reviewed, use the separately opt-in cross-encoder instructions above and add `--temperature 0` for the reranking experiment. Keep the same prompt/model/temperature when comparing profiles, and check whether current policy ranks ahead of archived policy without dropping other required evidence.
