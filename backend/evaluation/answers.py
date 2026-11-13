@@ -1,5 +1,6 @@
 """Answer review packs. Format checks are automatic; correctness/support need reviewed claims."""
 
+import copy
 import re
 import time
 from collections.abc import Callable
@@ -39,6 +40,7 @@ def evaluate_answers(
     candidate_k=20,
     context_characters=24000,
     rerank: Callable | None = None,
+    prompt_generators: dict[str, Callable] | None = None,
 ) -> dict:
     if (
         not profiles
@@ -113,38 +115,47 @@ def evaluate_answers(
                     ],
                 }
             )
-            start = time.perf_counter()
-            try:
-                output = (
-                    generate(query["question"], context)
-                    if selected
-                    else GeneratedAnswer(NO_CONTEXT_ANSWER)
-                )
-                if not isinstance(output, GeneratedAnswer) or not output.text.strip():
-                    raise ValueError("Invalid generated answer")
-                result.update(
-                    {
-                        "status": "ok" if selected else "no_context",
-                        "answer": output.text,
-                        "generation_seconds": time.perf_counter() - start if selected else None,
-                        "prompt_tokens": output.prompt_tokens,
-                        "answer_tokens": output.answer_tokens,
-                        "citation_reference_check": citation_references(output.text, len(selected)),
-                    }
-                )
-            except Exception:
-                result.update(
-                    {
-                        "status": "provider_error",
-                        "answer": None,
-                        "generation_seconds": time.perf_counter() - start,
-                        "error": "Generation failed. Check the model/provider; no answer was fabricated.",
-                    }
-                )
-            results.append(result)
+            base_result = result
+            for version, generator in (prompt_generators or {PROMPT_VERSION: generate}).items():
+                result = copy.deepcopy(base_result)
+                if prompt_generators:
+                    result["profile"] = f"{profile}/{version}"
+                result["prompt_version"] = version
+                start = time.perf_counter()
+                try:
+                    output = (
+                        generator(query["question"], context)
+                        if selected
+                        else GeneratedAnswer(NO_CONTEXT_ANSWER)
+                    )
+                    if not isinstance(output, GeneratedAnswer) or not output.text.strip():
+                        raise ValueError("Invalid generated answer")
+                    result.update(
+                        {
+                            "status": "ok" if selected else "no_context",
+                            "answer": output.text,
+                            "generation_seconds": time.perf_counter() - start if selected else None,
+                            "prompt_tokens": output.prompt_tokens,
+                            "answer_tokens": output.answer_tokens,
+                            "citation_reference_check": citation_references(
+                                output.text, len(selected)
+                            ),
+                        }
+                    )
+                except Exception:
+                    result.update(
+                        {
+                            "status": "provider_error",
+                            "answer": None,
+                            "generation_seconds": time.perf_counter() - start,
+                            "error": "Generation failed. Check the model/provider; no answer was fabricated.",
+                        }
+                    )
+                results.append(result)
     return {
         "dataset_description": data.get("description"),
-        "prompt_version": PROMPT_VERSION,
+        "prompt_version": None if prompt_generators else PROMPT_VERSION,
+        "prompt_versions": list(prompt_generators or {PROMPT_VERSION: generate}),
         "strategy": strategy,
         "embedding_batch_seconds": embedding_seconds,
         "results": results,

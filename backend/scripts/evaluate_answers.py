@@ -11,7 +11,7 @@ import httpx
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from evaluation.answers import GeneratedAnswer, evaluate_answers, summarize_reviews  # noqa: E402
-from services.generation_protocol import chat_payload  # noqa: E402
+from services.generation_protocol import PROMPTS, chat_payload  # noqa: E402
 from services.reranking_service import rerank_chunks  # noqa: E402
 
 
@@ -48,6 +48,10 @@ def main():
         default=os.environ.get("RERANKER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2"),
     )
     parser.add_argument("--temperature", type=float, default=None)
+    parser.add_argument(
+        "--prompt-versions",
+        help="Comma-separated prompt versions for a controlled baseline-only comparison",
+    )
     args = parser.parse_args()
     if args.review_file:
         try:
@@ -71,6 +75,16 @@ def main():
         not math.isfinite(args.temperature) or args.temperature < 0 or args.temperature > 2
     ):
         parser.error("Temperature must be between 0 and 2")
+    versions = tuple(args.prompt_versions.split(",")) if args.prompt_versions else ()
+    if versions and (
+        len(set(versions)) != len(versions)
+        or not set(versions) <= set(PROMPTS)
+        or profiles != ("baseline",)
+        or args.temperature != 0
+    ):
+        parser.error(
+            "Prompt comparison requires known unique versions, --profiles baseline and --temperature 0"
+        )
     try:
         data = json.loads(args.dataset.read_text())
         identities = [row["id"] for row in data["chunks"]]
@@ -120,10 +134,16 @@ def main():
                 raise ValueError("Invalid embedding response")
             return vectors
 
-        def generate(question, context):
+        def generate(question, context, version=None):
             response = client.post(
                 args.ollama_url.rstrip("/") + "/api/chat",
-                json=chat_payload(question, context, args.answer_model, args.temperature),
+                json=chat_payload(
+                    question,
+                    context,
+                    args.answer_model,
+                    args.temperature,
+                    **({"prompt_version": version} if version else {}),
+                ),
             )
             response.raise_for_status()
             body = response.json()
@@ -144,6 +164,11 @@ def main():
                 generate,
                 strategy=args.strategy,
                 profiles=profiles,
+                prompt_generators={
+                    version: (lambda q, c, version=version: generate(q, c, version))
+                    for version in versions
+                }
+                or None,
                 rerank=(
                     lambda question, chunks: rerank_chunks(question, chunks, args.reranker_model)
                 )
