@@ -146,3 +146,36 @@ docker compose -p rag-updated exec -T api .venv/bin/python scripts/evaluate_answ
 This produces 51 actual generations (17 questions times three prompts) using existing Ollama models. For a small initial check, add `--case-ids contractor-leave,email-reuse,leave-comparison,resolution-time`, then run the full suite before drawing conclusions. Repeat the full command reversing `--prompt-versions` to `concise-examples-v3,policy-grounding-v2,original-v1` and save as `policy-prompt-comparison-run2.json`. Temperature zero is not a determinism guarantee; latency includes order/cache effects and differing instruction lengths.
 
 Each row identifies its prompt version and has a profile such as `baseline/original-v1`. The existing offline review command groups these separately. Review correctness, exceptions, supported negative answers, partial answers and claim-level citations across all cases; do not optimize only known failures. Provider failures remain explicit and do not stop other variants. No candidate is promoted automatically. Production still uses `policy-grounding-v2` with unchanged sampling, dense retrieval, five excerpts and disabled re-ranking. Automated request/context tests cannot establish real model improvement.
+
+## Citation order and follow-up policy checks
+
+The candidate remains experimental. `--excerpt-order ranked|reversed|shuffled` changes presentation **after** selection and budgeting, not which evidence is selected. Markers are reassigned to the presented order; `excerpts` is the authoritative marker-to-source mapping. `ranked_ids` and retrieval metrics preserve original ranking, while `retrieved_ids` records presented order. Shuffling uses `--order-seed` plus case ID and is reproducible for the same selected evidence. A shuffle may happen to leave an order unchanged. Compare recorded evidence sets between separate runs; embedding/provider changes can affect retrieval.
+
+The separate `evaluation/citation_policy_cases.json` fixture has nine fictional chunks and ten questions about expense limits, contract-like exceptions, exact approval boundaries, security methods, warranties and explicit negative guarantees. Two cases request unavailable personal information. It was authored after reviewing the earlier failures: it is follow-up development evaluation, not a blind holdout or proof of real-world quality. It does not reuse the candidate prompt's example scenarios.
+
+After merging, pulling main and rebuilding the API, run all three prompt variants against the new cases with three presentation orders (90 generations total):
+
+```sh
+for order in ranked reversed shuffled; do
+  docker compose -p rag-updated exec -T api .venv/bin/python scripts/evaluate_answers.py \
+    --dataset evaluation/citation_policy_cases.json \
+    --allow-inference --profiles baseline --temperature 0 \
+    --prompt-versions original-v1,policy-grounding-v2,concise-examples-v3 \
+    --excerpt-order "$order" --order-seed 17 \
+    > "citation-policy-${order}.json"
+done
+```
+
+Also check the known leave-comparison citation failure under a different evidence order:
+
+```sh
+docker compose -p rag-updated exec -T api .venv/bin/python scripts/evaluate_answers.py \
+  --allow-inference --profiles baseline --temperature 0 \
+  --prompt-versions original-v1,policy-grounding-v2,concise-examples-v3 \
+  --excerpt-order reversed \
+  > policy-prompt-comparison-reversed.json
+```
+
+Review against each report's actual excerpts. For each claim, verify the cited marker supports that specific claim, current policies support current amounts, exceptions/limits remain intact, and missing evidence produces partial answers or appropriate refusal. A valid marker number is insufficient. For the leave comparison, the 20-day claim must cite the current policy regardless of its new marker. For receipt/security exceptions and expense comparisons, ensure retrieved evidence is complete before attributing an error to the prompt.
+
+Use the existing review fields and offline summary per report; keep order reports separate. Check all cases for regressions, not just previously failing questions. Production defaults and prompts remain unchanged. Automated tests verify ordering, evidence preservation, marker mapping, repeatability and unchanged ranking metrics, not claim support or model correctness. Promote no candidate automatically; review real outputs first, and evaluate reranking separately afterwards.

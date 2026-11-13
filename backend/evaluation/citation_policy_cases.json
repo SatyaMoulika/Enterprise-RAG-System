@@ -1,0 +1,147 @@
+{
+  "description": "Fictional follow-up development evaluation for citation order, policy exceptions and comparisons. Separate from original policy cases and prompt examples; authored after observing failures, not an unseen production benchmark.",
+  "chunks": [
+    {
+      "id": 101,
+      "document_id": 101,
+      "title": "expenses-current.txt",
+      "chunk_index": 0,
+      "chunk_text": "CURRENT EXPENSE POLICY EXP-2027: Domestic hotel reimbursement is capped at 140 credits per night. Accessibility-related hotel costs may exceed this cap with finance approval. This replaces EXP-2025."
+    },
+    {
+      "id": 102,
+      "document_id": 102,
+      "title": "expenses-archived.txt",
+      "chunk_index": 0,
+      "chunk_text": "ARCHIVED EXPENSE POLICY EXP-2025: Domestic hotel reimbursement was capped at 100 credits per night. Superseded by EXP-2027; do not use for current claims."
+    },
+    {
+      "id": 103,
+      "document_id": 103,
+      "title": "meal-expenses.txt",
+      "chunk_index": 0,
+      "chunk_text": "Meal reimbursement is capped at 35 credits per day. Alcohol is not reimbursable. The meal cap is separate from the hotel cap."
+    },
+    {
+      "id": 104,
+      "document_id": 104,
+      "title": "receipt-deadline.txt",
+      "chunk_index": 0,
+      "chunk_text": "Expense receipts must be submitted within 21 calendar days of purchase. For an approved medical absence, finance may grant a written extension."
+    },
+    {
+      "id": 105,
+      "document_id": 105,
+      "title": "purchasing.txt",
+      "chunk_index": 0,
+      "chunk_text": "Purchases above 800 credits require finance approval before ordering. Purchases of 800 credits or less do not require finance approval under this rule. Splitting orders to evade the threshold is prohibited."
+    },
+    {
+      "id": 106,
+      "document_id": 106,
+      "title": "security-keys.txt",
+      "chunk_index": 0,
+      "chunk_text": "Staff must use hardware security keys for privileged access. Temporary recovery codes may be used for up to 12 hours with security-team approval. Password-only access is not permitted."
+    },
+    {
+      "id": 107,
+      "document_id": 107,
+      "title": "support-acknowledgment.txt",
+      "chunk_index": 0,
+      "chunk_text": "Support requests are acknowledged within two business days. Acknowledgment is not completion. No fixed completion date is guaranteed."
+    },
+    {
+      "id": 108,
+      "document_id": 108,
+      "title": "equipment-warranty.txt",
+      "chunk_index": 0,
+      "chunk_text": "Monitors have a 24-month warranty. Keyboards have a 12-month warranty. Accidental liquid damage is excluded from both warranties."
+    },
+    {
+      "id": 109,
+      "document_id": 109,
+      "title": "expense-scope.txt",
+      "chunk_index": 0,
+      "chunk_text": "These expense and equipment policies contain no employee bank account numbers or individual reimbursement balances."
+    }
+  ],
+  "queries": [
+    {
+      "id": "hotel-current",
+      "question": "What is the current domestic hotel reimbursement cap?",
+      "relevant_ids": [
+        101
+      ],
+      "reference_answer": "140 credits per night under EXP-2027; accessibility-related costs can exceed it with finance approval."
+    },
+    {
+      "id": "hotel-exception",
+      "question": "Can an accessibility-related hotel cost exceed the normal cap?",
+      "relevant_ids": [
+        101
+      ],
+      "reference_answer": "Yes, with finance approval; the normal cap is 140 credits per night."
+    },
+    {
+      "id": "expense-comparison",
+      "question": "Compare the current domestic hotel and meal reimbursement caps.",
+      "relevant_ids": [
+        101,
+        103
+      ],
+      "reference_answer": "Hotels: 140 credits per night, with the approved accessibility exception. Meals: 35 credits per day, excluding alcohol."
+    },
+    {
+      "id": "receipts-exception",
+      "question": "What is the receipt submission deadline, and can medical absence change it?",
+      "relevant_ids": [
+        104
+      ],
+      "reference_answer": "21 calendar days from purchase; finance may grant a written extension for approved medical absence."
+    },
+    {
+      "id": "approval-boundary",
+      "question": "Does a purchase of exactly 800 credits require finance approval under this rule?",
+      "relevant_ids": [
+        105
+      ],
+      "reference_answer": "No. Only purchases above 800 require finance approval before ordering; splitting orders to evade the threshold is prohibited."
+    },
+    {
+      "id": "security-exception",
+      "question": "Is a hardware security key always the only permitted privileged-access method?",
+      "relevant_ids": [
+        106
+      ],
+      "reference_answer": "No. Approved temporary recovery codes may be used for up to 12 hours; password-only access is prohibited."
+    },
+    {
+      "id": "support-guarantee",
+      "question": "What completion date is guaranteed for a support request?",
+      "relevant_ids": [
+        107
+      ],
+      "reference_answer": "No fixed completion date is guaranteed. Two business days is the acknowledgment deadline, not completion."
+    },
+    {
+      "id": "warranty-comparison",
+      "question": "Compare monitor and keyboard warranties, including liquid damage.",
+      "relevant_ids": [
+        108
+      ],
+      "reference_answer": "Monitors: 24 months. Keyboards: 12 months. Accidental liquid damage is excluded from both."
+    },
+    {
+      "id": "bank-account",
+      "question": "What is employee Tara's bank account number?",
+      "relevant_ids": [],
+      "reference_answer": "The policies do not contain employee bank account numbers. Do not invent a number."
+    },
+    {
+      "id": "individual-balance",
+      "question": "What is my outstanding reimbursement balance?",
+      "relevant_ids": [],
+      "reference_answer": "The policies do not specify individual reimbursement balances. Do not invent an amount."
+    }
+  ]
+}
