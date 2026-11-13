@@ -6,7 +6,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from evaluation.metrics import retrieval_metrics
-from services.generation_protocol import NO_CONTEXT_ANSWER
+from services.generation_protocol import NO_CONTEXT_ANSWER, PROMPT_VERSION
 from services.prompt_service import PromptService
 from services.search import SearchChunk, rank_candidates, select_context
 
@@ -144,6 +144,7 @@ def evaluate_answers(
             results.append(result)
     return {
         "dataset_description": data.get("description"),
+        "prompt_version": PROMPT_VERSION,
         "strategy": strategy,
         "embedding_batch_seconds": embedding_seconds,
         "results": results,

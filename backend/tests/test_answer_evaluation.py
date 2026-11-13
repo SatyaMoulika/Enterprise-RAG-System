@@ -12,7 +12,7 @@ from evaluation.answers import (
     summarize_reviews,
 )
 from services import reranking_service
-from services.generation_protocol import chat_payload
+from services.generation_protocol import PROMPT_VERSION, chat_payload
 from services.search import SearchChunk
 
 
@@ -62,6 +62,7 @@ def report():
 
 def test_review_pack_uses_actual_callback_output_without_claiming_correctness():
     result = report()
+    assert result["prompt_version"] == PROMPT_VERSION
     assert len(result["results"]) == 4
     assert result["results"][0]["answer"] == "Twenty days [1]."
     assert result["results"][0]["review"]["correct"] is None

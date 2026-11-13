@@ -4,6 +4,7 @@ import pytest
 from core.config import settings
 from core.errors import ProviderUnavailable
 from services.embedding_service import EmbeddingService
+from services.generation_protocol import chat_payload
 from services.llm_service import LLMService
 
 
@@ -55,6 +56,8 @@ def test_provider_timeout_is_sanitized(monkeypatch):
 def test_chat_instructions_and_response(monkeypatch):
     def post(url, **kwargs):
         assert url.endswith("/api/chat")
+        assert kwargs["json"] == chat_payload("test", "context", settings.OLLAMA_CHAT_MODEL)
+        assert "options" not in kwargs["json"]
         messages = kwargs["json"]["messages"]
         assert messages[0]["role"] == "system"
         assert "untrusted" in messages[0]["content"]
