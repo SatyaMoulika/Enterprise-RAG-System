@@ -1,6 +1,7 @@
 """Answer review packs. Format checks are automatic; correctness/support need reviewed claims."""
 
 import copy
+import random
 import re
 import time
 from collections.abc import Callable
@@ -41,6 +42,8 @@ def evaluate_answers(
     context_characters=24000,
     rerank: Callable | None = None,
     prompt_generators: dict[str, Callable] | None = None,
+    excerpt_order: str = "ranked",
+    order_seed: int = 0,
 ) -> dict:
     if (
         not profiles
@@ -49,6 +52,8 @@ def evaluate_answers(
         or ("reranked" in profiles and rerank is None)
     ):
         raise ValueError("Invalid answer evaluation profiles")
+    if excerpt_order not in {"ranked", "reversed", "shuffled"}:
+        raise ValueError("Invalid excerpt order")
     if candidate_k < 5 or context_characters < 1:
         raise ValueError("Invalid evaluation limits")
     texts = [c["chunk_text"] for c in data["chunks"]] + [q["question"] for q in data["queries"]]
@@ -101,12 +106,20 @@ def evaluate_answers(
                 top_k=k,
                 context_characters=context_characters,
             )
+            ranked_ids = [c.id for c in selected]
+            if excerpt_order == "reversed":
+                selected = list(reversed(selected))
+            elif excerpt_order == "shuffled":
+                selected = selected.copy()
+                random.Random(f"{order_seed}:{query['id']}").shuffle(selected)
             context = PromptService.build_context([c.context() for c in selected])
             result.update(
                 {
                     "retrieved_ids": [c.id for c in selected],
+                    "ranked_ids": ranked_ids,
+                    "excerpt_order": excerpt_order,
                     "retrieval_metrics": retrieval_metrics(
-                        [c.id for c in selected], set(query["relevant_ids"]), k
+                        ranked_ids, set(query["relevant_ids"]), k
                     ),
                     "context_characters": len(context),
                     "excerpts": [
@@ -157,6 +170,8 @@ def evaluate_answers(
         "prompt_version": None if prompt_generators else PROMPT_VERSION,
         "prompt_versions": list(prompt_generators or {PROMPT_VERSION: generate}),
         "strategy": strategy,
+        "excerpt_order": excerpt_order,
+        "order_seed": order_seed if excerpt_order == "shuffled" else None,
         "embedding_batch_seconds": embedding_seconds,
         "results": results,
         "review_instructions": "Fill correct/refused with booleans after inspecting the reference and excerpts. Add claims with text, supported, cited and citation_supported booleans (or null when unreviewed). Citation markers alone do not establish support. Do not include irrelevant/private document content in shared reports.",
