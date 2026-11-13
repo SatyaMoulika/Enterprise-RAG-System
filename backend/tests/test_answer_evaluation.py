@@ -375,3 +375,52 @@ def test_prompt_comparison_rejects_uncontrolled_or_unknown_settings(extra):
     )
     assert result.returncode == 2
     assert "Prompt comparison requires" in result.stderr
+
+
+@pytest.mark.parametrize("order", ["ranked", "reversed", "shuffled"])
+def test_excerpt_order_changes_presentation_not_evidence_or_rank_metrics(order):
+    from services.prompt_service import PromptService
+
+    def run(selected_order):
+        seen = []
+
+        def generate(question, context):
+            seen.append(context)
+            return GeneratedAnswer("Answer [1].")
+
+        value = evaluate_answers(
+            dataset(),
+            lambda texts: [[1, 0]] * len(texts),
+            generate,
+            profiles=("baseline",),
+            excerpt_order=selected_order,
+            order_seed=17,
+        )
+        return value, seen
+
+    original, _ = run("ranked")
+    changed, seen = run(order)
+    repeated, repeated_seen = run(order)
+    assert seen == repeated_seen
+    for index, (a, b) in enumerate(zip(original["results"], changed["results"], strict=True)):
+        assert set(a["retrieved_ids"]) == set(b["retrieved_ids"])
+        assert a["ranked_ids"] == b["ranked_ids"]
+        assert a["retrieval_metrics"] == b["retrieval_metrics"]
+        assert b["retrieved_ids"] == repeated["results"][index]["retrieved_ids"]
+        if order == "reversed":
+            assert b["retrieved_ids"] == list(reversed(a["retrieved_ids"]))
+        assert [e["marker"] for e in b["excerpts"]] == list(range(1, len(b["excerpts"]) + 1))
+        assert seen[index] == PromptService.build_context(
+            [{k: v for k, v in e.items() if k not in {"marker", "chunk_id"}} for e in b["excerpts"]]
+        )
+
+
+def test_followup_policy_fixture_labels_and_scope():
+    import json
+
+    path = Path(__file__).resolve().parents[1] / "evaluation/citation_policy_cases.json"
+    value = json.loads(path.read_text())
+    ids = {c["id"] for c in value["chunks"]}
+    assert len(ids) == len(value["chunks"]) == 9
+    assert len({q["id"] for q in value["queries"]}) == 10
+    assert all(set(q["relevant_ids"]) <= ids and q["reference_answer"] for q in value["queries"])
