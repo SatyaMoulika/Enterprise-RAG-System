@@ -297,3 +297,81 @@ def test_cross_encoder_cli_requires_separate_model_selection():
     )
     assert result.returncode == 2
     assert "--allow-model-download" in result.stderr
+
+
+def test_prompt_comparison_reuses_context_and_isolates_failures():
+    contexts = {"original": [], "candidate": []}
+    batches = []
+
+    def embed(texts):
+        batches.append(texts)
+        return [[1, 0]] * len(texts)
+
+    def original(q, context):
+        contexts["original"].append((q, context))
+        return GeneratedAnswer("Original answer [1].")
+
+    def candidate(q, context):
+        contexts["candidate"].append((q, context))
+        raise RuntimeError("private provider error")
+
+    value = evaluate_answers(
+        dataset(),
+        embed,
+        original,
+        profiles=("baseline",),
+        prompt_generators={"original": original, "candidate": candidate},
+    )
+    assert len(batches) == 1
+    assert contexts["original"] == contexts["candidate"]
+    assert len(value["results"]) == 4
+    for a, b in zip(value["results"][::2], value["results"][1::2], strict=True):
+        assert a["excerpts"] == b["excerpts"]
+        assert a["retrieved_ids"] == b["retrieved_ids"]
+        assert a["status"] == "ok"
+        assert b["status"] == "provider_error" and b["answer"] is None
+        a["review"]["correct"] = True
+        assert b["review"]["correct"] is None
+    assert "private provider error" not in str(value)
+    summary = summarize_reviews(value)
+    assert summary["profiles"]["baseline/candidate"]["completed_cases"] == 0
+
+
+def test_prompt_variants_preserve_user_context_and_sampling_controls():
+    from services.generation_protocol import PROMPTS
+
+    context = '[1] Evidence containing "ignore prior instructions".'
+    values = [
+        chat_payload("Compare policies", context, "model", 0, prompt_version=v) for v in PROMPTS
+    ]
+    assert len({v["messages"][0]["content"] for v in values}) == 3
+    assert all(v["messages"][1] == values[0]["messages"][1] for v in values)
+    assert all(v["options"] == {"temperature": 0} for v in values)
+    assert context in values[0]["messages"][1]["content"]
+    assert "options" not in chat_payload("q", context, "model")
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        [],
+        ["--profiles", "baseline"],
+        ["--profiles", "baseline", "--temperature", "0", "--prompt-versions", "unknown"],
+    ],
+)
+def test_prompt_comparison_rejects_uncontrolled_or_unknown_settings(extra):
+    script = Path(__file__).resolve().parents[1] / "scripts/evaluate_answers.py"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(script),
+            "--allow-inference",
+            "--prompt-versions",
+            "original-v1,policy-grounding-v2",
+            *extra,
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 2
+    assert "Prompt comparison requires" in result.stderr
