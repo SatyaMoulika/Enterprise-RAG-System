@@ -129,3 +129,20 @@ docker compose -p rag-updated exec -T api .venv/bin/python scripts/evaluate_answ
 Review all cases, especially `contractor-leave`, `email-reuse`, `leave-comparison`, `resolution-time`, and missing citations. Temperature zero reduces sampling variability but does not guarantee reproducibility. The earlier report used provider-default sampling; comparisons with it change both prompt and temperature. Prompt length also increases input tokens. Compare correctness before optimizing token counts; timing includes model/cache/order effects. No real-model improvement is claimed by automated tests.
 
 Once prompt behaviour is reviewed, use the separately opt-in cross-encoder instructions above and add `--temperature 0` for the reranking experiment. Keep the same prompt/model/temperature when comparing profiles, and check whether current policy ranks ahead of archived policy without dropping other required evidence.
+
+## Controlled prompt comparison (production prompt unchanged)
+
+Use `--prompt-versions` to compare the exact original prompt (`original-v1`), the current application prompt (`policy-grounding-v2`), and an experimental concise prompt (`concise-examples-v3`). The experiment requires `--profiles baseline --temperature 0`: five excerpts, the same models, no reranker, and identical question/context strings across variants. Embedding and retrieval run once; each selected prompt receives the same evidence. Only system instructions change. The concise prompt uses illustrative remote-work, equipment-delivery and shipping examples separate from the policy fixture; they are labelled as examples, not evidence. This is development evaluation, not an unseen holdout benchmark.
+
+After merging, pulling main and rebuilding `api`, run:
+
+```sh
+docker compose -p rag-updated exec -T api .venv/bin/python scripts/evaluate_answers.py \
+  --allow-inference --profiles baseline --temperature 0 \
+  --prompt-versions original-v1,policy-grounding-v2,concise-examples-v3 \
+  > policy-prompt-comparison-run1.json
+```
+
+This produces 51 actual generations (17 questions times three prompts) using existing Ollama models. For a small initial check, add `--case-ids contractor-leave,email-reuse,leave-comparison,resolution-time`, then run the full suite before drawing conclusions. Repeat the full command reversing `--prompt-versions` to `concise-examples-v3,policy-grounding-v2,original-v1` and save as `policy-prompt-comparison-run2.json`. Temperature zero is not a determinism guarantee; latency includes order/cache effects and differing instruction lengths.
+
+Each row identifies its prompt version and has a profile such as `baseline/original-v1`. The existing offline review command groups these separately. Review correctness, exceptions, supported negative answers, partial answers and claim-level citations across all cases; do not optimize only known failures. Provider failures remain explicit and do not stop other variants. No candidate is promoted automatically. Production still uses `policy-grounding-v2` with unchanged sampling, dense retrieval, five excerpts and disabled re-ranking. Automated request/context tests cannot establish real model improvement.
