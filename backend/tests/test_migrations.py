@@ -27,3 +27,27 @@ def test_upgrade_from_empty_then_downgrade_disposable_database(tmp_path, monkeyp
     engine = create_engine(url)
     assert "users" not in inspect(engine).get_table_names()
     engine.dispose()
+
+
+def test_document_access_upgrade_preserves_existing_company_documents(tmp_path, monkeypatch):
+    from sqlalchemy import text
+
+    url = f"sqlite:///{tmp_path / 'access-upgrade.db'}"
+    monkeypatch.setattr(settings, "DATABASE_URL", url)
+    config = Config(str(Path(__file__).resolve().parents[1] / "alembic.ini"))
+    command.upgrade(config, "0002")
+    engine = create_engine(url)
+    with engine.begin() as connection:
+        connection.execute(text("INSERT INTO enterprises (id, name) VALUES (1, 'Example')"))
+        connection.execute(
+            text(
+                "INSERT INTO documents (id, enterprise_id, title, file_path) VALUES (1, 1, 'Existing.txt', '/tmp/existing.txt')"
+            )
+        )
+    command.upgrade(config, "head")
+    with engine.connect() as connection:
+        assert (
+            connection.execute(text("SELECT visibility FROM documents WHERE id=1")).scalar_one()
+            == "company"
+        )
+    engine.dispose()

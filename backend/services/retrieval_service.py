@@ -4,6 +4,7 @@ from core.config import settings
 from core.errors import RetrievalCapacityExceeded
 from models.document import Document
 from models.document_chunk import DocumentChunk
+from services.document_access import accessible_documents
 from services.embedding_service import EmbeddingService
 from services.reranking_service import rerank_chunks
 from services.search import SearchChunk, rank_candidates, select_context
@@ -11,7 +12,7 @@ from services.search import SearchChunk, rank_candidates, select_context
 
 class RetrievalService:
     @classmethod
-    def retrieve(cls, question, enterprise_id, db, top_k=None):
+    def retrieve(cls, question, enterprise_id, db, top_k=None, user=None, document_id=None):
         # Authorization/model filtering precedes BOTH rankers. BM25 statistics are tenant-local.
         rows = db.execute(
             select(DocumentChunk, Document.title)
@@ -19,6 +20,8 @@ class RetrievalService:
             .where(
                 DocumentChunk.enterprise_id == enterprise_id,
                 Document.enterprise_id == enterprise_id,
+                accessible_documents(user),
+                Document.id == document_id if document_id is not None else True,
                 DocumentChunk.embedding.is_not(None),
                 DocumentChunk.embedding_model
                 == f"{settings.EMBEDDING_BACKEND}:{settings.EMBEDDING_MODEL}",

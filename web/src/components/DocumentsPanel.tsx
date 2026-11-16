@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { AIMotion, Badge, Button, Card, Eyebrow } from '@portfolio/porcelain-azure';
 import { ApiClient, ApiError, errorMessage, isCancelled } from '../api/client';
-import type { DocumentLimits, DocumentRecord } from '../api/types';
+import type { DocumentAccess, DocumentLimits, DocumentRecord } from '../api/types';
 import { Feedback } from './Feedback';
+import { DocumentAccessFields } from './DocumentAccessFields';
+import { DocumentViewer } from './DocumentViewer';
 import { ConfirmationDialog } from './ConfirmationDialog';
 const sizeLabel = (bytes: number) =>
   bytes >= 1024 * 1024
@@ -14,11 +16,26 @@ export function DocumentsPanel({
   api,
   isAdmin,
   onCount,
+  onChat,
 }: {
   api: ApiClient;
   isAdmin: boolean;
   onCount: (count: number) => void;
+  onChat?: (document: DocumentRecord) => void;
 }) {
+  const [access, setAccess] = useState<DocumentAccess>({
+    visibility: 'company',
+    recipient_ids: [],
+  });
+  const [editing, setEditing] = useState<DocumentRecord | null>(null);
+  const [editAccess, setEditAccess] = useState<DocumentAccess>({
+    visibility: 'company',
+    recipient_ids: [],
+  });
+  const [savingAccess, setSavingAccess] = useState(false);
+  const [preview, setPreview] = useState<DocumentRecord | null>(null);
+  const [category, setCategory] = useState('all');
+  const [search, setSearch] = useState('');
   const [documents, setDocuments] = useState<DocumentRecord[] | null>(null);
   const [limits, setLimits] = useState<DocumentLimits | null>(null);
   const [limitsError, setLimitsError] = useState('');
@@ -95,7 +112,7 @@ export function DocumentsPanel({
     setError('');
     setNotice('');
     try {
-      const result = await api.upload(selected, lifetime.current?.signal);
+      const result = await api.upload(selected, lifetime.current?.signal, access);
       setSelected(null);
       if (input.current) input.current.value = '';
       setNotice(`“${result.title}” is indexed and ready for questions.`);
@@ -135,14 +152,14 @@ export function DocumentsPanel({
     <section aria-labelledby="documents-heading">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <Eyebrow>Documents / Shared workspace knowledge</Eyebrow>
+          <Eyebrow>Employee hub / Your knowledge library</Eyebrow>
           <h1 id="documents-heading" className="mt-2 text-3xl font-bold tracking-tight">
-            Your source material.
+            Your documents, together.
           </h1>
           <p className="mt-2 text-xs text-muted">
             {isAdmin
-              ? 'Upload and manage the documents your workspace can search.'
-              : 'Browse the documents your administrator has shared.'}
+              ? 'Share company knowledge, assign personal letters and control employee access.'
+              : 'Your personal letters and the company knowledge shared with you, in one place.'}
           </p>
         </div>
         <Button
@@ -172,6 +189,12 @@ export function DocumentsPanel({
                 <Feedback error>{limitsError} Use Refresh documents to try again.</Feedback>
               </div>
             )}
+            <DocumentAccessFields
+              api={api}
+              value={access}
+              onChange={setAccess}
+              disabled={uploading || uncertain}
+            />
             <div className="flex flex-wrap items-center gap-4">
               <input
                 ref={input}
@@ -204,6 +227,110 @@ export function DocumentsPanel({
         )}
         {notice && <Feedback>{notice}</Feedback>}
       </div>
+      {documents && (
+        <div className="mb-6 space-y-4">
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              ['personal', 'Personal documents'],
+              ['company', 'Company knowledge'],
+              ['restricted', 'Restricted documents'],
+            ].map(([value, label]) => (
+              <button
+                key={value}
+                onClick={() => setCategory(value)}
+                aria-pressed={category === value}
+                className="rounded-xl border border-line bg-soft/40 p-4 text-left"
+              >
+                <span className="block text-2xl font-bold text-azure">
+                  {documents.filter((d) => (d.visibility || 'company') === value).length}
+                </span>
+                <span className="text-xs text-muted">{label}</span>
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <label className="flex-1 text-xs">
+              Find a document
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search offer letters, policies, products…"
+                className="mt-2 block w-full rounded-lg border border-line bg-surface p-3 text-sm"
+              />
+            </label>
+            <label className="text-xs">
+              Show
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="mt-2 block rounded-lg border border-line bg-surface p-3 text-sm"
+              >
+                <option value="all">All documents</option>
+                <option value="personal">Personal</option>
+                <option value="company">Company</option>
+                <option value="restricted">Restricted</option>
+              </select>
+            </label>
+          </div>
+          {documents.length > 0 &&
+            !documents.some(
+              (d) =>
+                (category === 'all' || (d.visibility || 'company') === category) &&
+                d.title.toLowerCase().includes(search.toLowerCase()),
+            ) && (
+              <p role="status" className="text-sm text-muted">
+                No documents match your filters.
+              </p>
+            )}
+        </div>
+      )}
+      {preview && (
+        <DocumentViewer
+          key={preview.id}
+          api={api}
+          document={preview}
+          onClose={() => setPreview(null)}
+        />
+      )}
+      {editing && (
+        <Card className="mb-5 p-5">
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (savingAccess) return;
+              setSavingAccess(true);
+              setError('');
+              try {
+                await api.updateAccess(editing.id, editAccess, lifetime.current?.signal);
+                setEditing(null);
+                setPreview(null);
+                setNotice('Document access updated.');
+                await load();
+              } catch (err) {
+                if (!isCancelled(err)) setError(errorMessage(err));
+              } finally {
+                setSavingAccess(false);
+              }
+            }}
+          >
+            <h2 className="font-bold">Manage access · {editing.title}</h2>
+            <DocumentAccessFields
+              api={api}
+              value={editAccess}
+              onChange={setEditAccess}
+              disabled={savingAccess}
+            />
+            <div className="flex gap-3">
+              <Button type="submit" disabled={savingAccess}>
+                Save access
+              </Button>
+              <Button variant="ghost" disabled={savingAccess} onClick={() => setEditing(null)}>
+                Cancel access changes
+              </Button>
+            </div>
+          </form>
+        </Card>
+      )}
       {documents === null ? (
         <p role="status" className="py-8 text-center text-sm text-muted">
           {loading
@@ -224,38 +351,70 @@ export function DocumentsPanel({
         </Card>
       ) : (
         <ul aria-label="Workspace documents" className="space-y-3">
-          {documents.map((document) => (
-            <li key={document.id}>
-              <Card className="flex flex-wrap items-center justify-between gap-4 p-4 sm:p-5">
-                <div className="min-w-0 flex-1">
-                  <div className="mb-2 flex items-center gap-2">
-                    <span aria-hidden="true" className="text-azure">
-                      ▤
-                    </span>
-                    <h2 className="break-words text-sm font-bold">{document.title}</h2>
+          {documents
+            .filter(
+              (d) =>
+                (category === 'all' || (d.visibility || 'company') === category) &&
+                d.title.toLowerCase().includes(search.toLowerCase()),
+            )
+            .map((document) => (
+              <li key={document.id}>
+                <Card className="flex flex-wrap items-center justify-between gap-4 p-4 sm:p-5">
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-2 flex items-center gap-2">
+                      <span aria-hidden="true" className="text-azure">
+                        ▤
+                      </span>
+                      <h2 className="break-words text-sm font-bold">{document.title}</h2>
+                    </div>
+                    <p className="text-[11px] text-muted">
+                      Added {new Date(document.created_at).toLocaleDateString()} · Document #
+                      {document.id}
+                    </p>
                   </div>
-                  <p className="text-[11px] text-muted">
-                    Added {new Date(document.created_at).toLocaleDateString()} · Document #
-                    {document.id}
-                  </p>
-                </div>
-                <Badge>Stored</Badge>
-                {isAdmin && (
-                  <Button
-                    variant="ghost"
-                    disabled={uploading || deleting || uncertain}
-                    aria-label={`Delete ${document.title}`}
-                    onClick={() => {
-                      setConfirm(document);
-                      setDeleteError('');
-                    }}
-                  >
-                    Delete
+                  <Badge>
+                    {document.visibility === 'personal'
+                      ? 'Personal'
+                      : document.visibility === 'restricted'
+                        ? 'Restricted'
+                        : 'Company'}
+                  </Badge>
+                  <Button variant="secondary" onClick={() => setPreview(document)}>
+                    View
                   </Button>
-                )}
-              </Card>
-            </li>
-          ))}
+                  <Button variant="secondary" onClick={() => onChat?.(document)}>
+                    Ask about this
+                  </Button>
+                  {isAdmin && (
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setEditing(document);
+                        setEditAccess({
+                          visibility: document.visibility || 'company',
+                          recipient_ids: document.recipient_ids || [],
+                        });
+                      }}
+                    >
+                      Manage access
+                    </Button>
+                  )}
+                  {isAdmin && (
+                    <Button
+                      variant="ghost"
+                      disabled={uploading || deleting || uncertain}
+                      aria-label={`Delete ${document.title}`}
+                      onClick={() => {
+                        setConfirm(document);
+                        setDeleteError('');
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  )}
+                </Card>
+              </li>
+            ))}
         </ul>
       )}
       {confirm && (

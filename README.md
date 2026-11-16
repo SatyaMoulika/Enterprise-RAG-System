@@ -99,3 +99,7 @@ Old FAISS files are no longer read. Existing chunks have null embeddings after m
 ## Before a public deployment
 
 See [the release roadmap](docs/release-roadmap.md). Deploy only after validating PostgreSQL migrations, real-model document-to-answer behaviour, storage backup/restore and resource sizing. Add HTTPS, proxy-level request-body limits and rate/concurrency limits before exposing registration, upload or inference endpoints publicly. Application limits are checked after multipart parsing and do not replace ingress limits. Test PDF parsing in a resource-limited ingestion worker before allowing untrusted public PDF uploads. Public anonymous/open signup is not ready for production.
+
+### Employee document hub
+
+Employees can browse personal letters and company/restricted documents assigned by administrators, preview/download originals, and chat across their accessible library or one document. See [employee hub setup and access rules](docs/employee-document-hub.md), including migration behaviour for existing documents and administrator access to personal files.

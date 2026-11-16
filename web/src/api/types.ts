@@ -14,7 +14,13 @@ export interface RegisterPayload {
   email: string;
   password: string;
 }
+export interface DocumentAccess {
+  visibility: 'company' | 'personal' | 'restricted';
+  recipient_ids: number[];
+}
 export interface DocumentRecord {
+  visibility?: DocumentAccess['visibility'];
+  recipient_ids?: number[];
   id: number;
   title: string;
   enterprise_id: number;
