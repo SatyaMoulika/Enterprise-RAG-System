@@ -21,7 +21,7 @@ app = FastAPI(title=settings.APP_NAME, version="0.2.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
-    allow_methods=["GET", "POST", "DELETE"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
 )
 for router in (auth_router, users_router, document_router, chat_router):

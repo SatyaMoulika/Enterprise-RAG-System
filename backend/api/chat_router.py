@@ -14,5 +14,7 @@ def chat(
     payload: ChatRequest, db: Session = Depends(get_db), current_user=Depends(get_current_user)
 ):
     enterprise_id = current_user.enterprise_id
-    result = ChatService.ask(payload.question, enterprise_id, db)
+    result = ChatService.ask(
+        payload.question, enterprise_id, db, user=current_user, document_id=payload.document_id
+    )
     return result
