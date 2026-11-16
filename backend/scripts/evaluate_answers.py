@@ -52,6 +52,10 @@ def main():
         "--prompt-versions",
         help="Comma-separated prompt versions for a controlled baseline-only comparison",
     )
+    parser.add_argument(
+        "--excerpt-order", choices=["ranked", "reversed", "shuffled"], default="ranked"
+    )
+    parser.add_argument("--order-seed", type=int, default=0)
     args = parser.parse_args()
     if args.review_file:
         try:
@@ -164,6 +168,8 @@ def main():
                 generate,
                 strategy=args.strategy,
                 profiles=profiles,
+                excerpt_order=args.excerpt_order,
+                order_seed=args.order_seed,
                 prompt_generators={
                     version: (lambda q, c, version=version: generate(q, c, version))
                     for version in versions
