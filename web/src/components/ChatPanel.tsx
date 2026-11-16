@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { AIMotion, Button, Card, Eyebrow } from '@portfolio/porcelain-azure';
 import { ApiClient, errorMessage, isCancelled } from '../api/client';
-import type { Answer } from '../api/types';
+import type { Answer, DocumentRecord } from '../api/types';
 import { Feedback } from './Feedback';
+import { DocumentViewer } from './DocumentViewer';
 import { MarkdownAnswer } from './MarkdownAnswer';
 interface Turn {
   id: number;
@@ -13,10 +14,17 @@ interface Turn {
 export function ChatPanel({
   api,
   onOpenDocuments,
+  document,
+  onClearScope,
 }: {
   api: ApiClient;
   onOpenDocuments: () => void;
+  document?: DocumentRecord | null;
+  onClearScope?: () => void;
 }) {
+  const [sourcePreview, setSourcePreview] = useState<Pick<DocumentRecord, 'id' | 'title'> | null>(
+    null,
+  );
   const [question, setQuestion] = useState('');
   const [turns, setTurns] = useState<Turn[]>([]);
   const [busy, setBusy] = useState(false);
@@ -43,7 +51,7 @@ export function ChatPanel({
     setQuestion('');
     active.current = new AbortController();
     try {
-      const result = await api.ask(text, active.current.signal);
+      const result = await api.ask(text, active.current.signal, document?.id);
       setTurns((previous) => previous.map((turn) => (turn.id === id ? { ...turn, result } : turn)));
     } catch (error) {
       if (!isCancelled(error))
@@ -67,20 +75,35 @@ export function ChatPanel({
             Ask your documents.
           </h1>
           <p className="mt-2 text-xs text-muted">
-            Each question searches the current documents in this workspace.
+            {document
+              ? `Searching only: ${document.title}`
+              : 'Ask about your personal documents and company knowledge you can access.'}
           </p>
         </div>
         <Button variant="ghost" disabled={!turns.length || busy} onClick={() => setTurns([])}>
           Clear conversation
         </Button>
       </div>
+      {document && (
+        <Button variant="secondary" onClick={onClearScope}>
+          Search all my documents
+        </Button>
+      )}
+      {sourcePreview && (
+        <DocumentViewer
+          key={sourcePreview.id}
+          api={api}
+          document={sourcePreview}
+          onClose={() => setSourcePreview(null)}
+        />
+      )}
       {!turns.length ? (
         <Card className="mb-6 grid items-center gap-3 bg-soft/40 p-6 sm:grid-cols-[1fr_170px]">
           <div>
             <h2 className="text-lg font-bold">Start with a question.</h2>
             <p className="mb-4 mt-2 max-w-md text-xs leading-6 text-muted">
-              Upload a document, then ask about a policy, a process, or a detail you want to
-              understand. You can expand the retrieved excerpts to verify an answer.
+              Ask about your offer letter, appointment details, company policies or products. You
+              can expand the retrieved excerpts to verify an answer.
             </p>
             <Button variant="secondary" onClick={onOpenDocuments}>
               Open documents ↗
@@ -110,7 +133,7 @@ export function ChatPanel({
                     {turn.result.citations.length > 0 && (
                       <div className="mt-5 space-y-2 border-t border-line pt-4">
                         <p className="text-[11px] text-muted">
-                          Retrieved excerpts · check these to verify the answer.
+                          Retrieved evidence · use the numbered passages to verify each claim.
                         </p>
                         {turn.result.citations.map((source, index) => (
                           <details
@@ -123,6 +146,14 @@ export function ChatPanel({
                             <p className="whitespace-pre-wrap border-t border-line px-3 py-3 text-xs leading-6 text-muted">
                               {source.excerpt}
                             </p>
+                            <Button
+                              variant="ghost"
+                              onClick={() =>
+                                setSourcePreview({ id: source.document_id, title: source.title })
+                              }
+                            >
+                              Open source document
+                            </Button>
                           </details>
                         ))}
                       </div>

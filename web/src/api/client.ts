@@ -1,5 +1,6 @@
 import type {
   Answer,
+  DocumentAccess,
   Member,
   CreateMemberPayload,
   DocumentLimits,
@@ -39,7 +40,7 @@ export class ApiClient {
   ) {}
   private async request<T>(
     path: string,
-    options: { method?: string; body?: unknown; signal?: AbortSignal } = {},
+    options: { method?: string; body?: unknown; signal?: AbortSignal; blob?: boolean } = {},
   ): Promise<T> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
@@ -62,8 +63,12 @@ export class ApiClient {
               : JSON.stringify(options.body),
         signal: controller.signal,
         credentials: 'omit',
+        cache: 'no-store',
       });
-      const payload: unknown = await response.json().catch(() => null);
+      const payload: unknown =
+        response.ok && options.blob
+          ? await response.blob()
+          : await response.json().catch(() => null);
       if (options.signal?.aborted) throw new DOMException('Request cancelled', 'AbortError');
       if (!response.ok) {
         if (response.status === 401 && this.token) this.onUnauthorized?.();
@@ -137,9 +142,10 @@ export class ApiClient {
   limits(signal?: AbortSignal) {
     return this.request<DocumentLimits>('/documents/limits', { signal });
   }
-  upload(file: File, signal?: AbortSignal) {
+  upload(file: File, signal?: AbortSignal, access?: DocumentAccess) {
     const body = new FormData();
     body.append('file', file);
+    if (access) body.append('access', JSON.stringify(access));
     return this.request<DocumentRecord>('/documents/upload', { method: 'POST', body, signal });
   }
   removeDocument(id: number, signal?: AbortSignal) {
@@ -157,7 +163,21 @@ export class ApiClient {
       signal,
     });
   }
-  ask(question: string, signal?: AbortSignal) {
-    return this.request<Answer>('/chat/generate', { method: 'POST', body: { question }, signal });
+  updateAccess(id: number, body: DocumentAccess, signal?: AbortSignal) {
+    return this.request<DocumentRecord>(`/documents/${id}/access`, {
+      method: 'PATCH',
+      body,
+      signal,
+    });
+  }
+  documentFile(id: number, signal?: AbortSignal) {
+    return this.request<Blob>(`/documents/${id}/file`, { signal, blob: true });
+  }
+  ask(question: string, signal?: AbortSignal, documentId?: number) {
+    return this.request<Answer>('/chat/generate', {
+      method: 'POST',
+      body: { question, ...(documentId ? { document_id: documentId } : {}) },
+      signal,
+    });
   }
 }

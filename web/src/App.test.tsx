@@ -99,7 +99,8 @@ async function signIn() {
   await user.type(screen.getByLabelText('Email'), 'owner@example.com');
   await user.type(screen.getByLabelText('Password'), 'test password');
   await user.click(screen.getByRole('button', { name: /Continue to workspace/ }));
-  await screen.findByRole('heading', { name: 'Ask your documents.' });
+  await screen.findByRole('heading', { name: 'Your documents, together.' });
+  await user.click(screen.getByRole('button', { name: 'Ask documents' }));
   return user;
 }
 describe('real-data workspace', () => {
@@ -121,7 +122,7 @@ describe('real-data workspace', () => {
     await user.type(screen.getByLabelText('Email'), 'owner@example.com');
     await user.type(screen.getByLabelText('Password'), 'test password');
     await user.click(screen.getByRole('button', { name: /Create my workspace/ }));
-    await screen.findByRole('heading', { name: 'Ask your documents.' });
+    await screen.findByRole('heading', { name: 'Your documents, together.' });
     expect(
       JSON.parse(String(calls.find((c) => c.path === '/api/auth/register')?.options.body)),
     ).toMatchObject({ enterprise_name: 'Knowledge team' });
@@ -139,7 +140,7 @@ describe('real-data workspace', () => {
   });
   it('uploads real multipart data, refreshes the list and confirms deletion', async () => {
     const user = await signIn();
-    await user.click(screen.getByRole('button', { name: /Documents/ }));
+    await user.click(screen.getByRole('button', { name: /My documents/ }));
     const file = new File(['The office opens at nine.'], 'policy.txt', { type: 'text/plain' });
     await waitFor(() => expect(screen.getByLabelText('Add a document')).toBeEnabled());
     await user.upload(screen.getByLabelText('Add a document'), file);
@@ -156,7 +157,7 @@ describe('real-data workspace', () => {
   it('does not delete when the confirmation is cancelled', async () => {
     docs = [{ id: 12, title: 'policy.txt', enterprise_id: 7, created_at: '2026-11-12T09:00:00Z' }];
     const user = await signIn();
-    await user.click(screen.getByRole('button', { name: 'Documents' }));
+    await user.click(screen.getByRole('button', { name: 'My documents' }));
     await user.click(await screen.findByRole('button', { name: 'Delete policy.txt' }));
     await user.click(screen.getByRole('button', { name: 'Keep document' }));
     expect(calls.filter((c) => c.options.method === 'DELETE')).toHaveLength(0);
@@ -167,7 +168,7 @@ describe('real-data workspace', () => {
         ? json({ allowed_extensions: ['.txt'], max_upload_bytes: 3 })
         : undefined;
     const user = await signIn();
-    await user.click(screen.getByRole('button', { name: 'Documents' }));
+    await user.click(screen.getByRole('button', { name: 'My documents' }));
     await waitFor(() => expect(screen.getByLabelText('Add a document')).toBeEnabled());
     await user.upload(
       screen.getByLabelText('Add a document'),
@@ -183,7 +184,7 @@ describe('real-data workspace', () => {
         ? json({ detail: 'Embedding provider unavailable. Try again later.' }, 503)
         : undefined;
     const user = await signIn();
-    await user.click(screen.getByRole('button', { name: 'Documents' }));
+    await user.click(screen.getByRole('button', { name: 'My documents' }));
     await waitFor(() => expect(screen.getByLabelText('Add a document')).toBeEnabled());
     await user.upload(
       screen.getByLabelText('Add a document'),
@@ -200,7 +201,7 @@ describe('real-data workspace', () => {
     expect(await screen.findByText('The office opens at nine [1].')).toBeInTheDocument();
     await user.click(screen.getByText('[1] policy.txt · excerpt 1'));
     expect(screen.getByText('The office opens at nine.')).toBeVisible();
-    await user.click(screen.getByRole('button', { name: 'Documents' }));
+    await user.click(screen.getByRole('button', { name: 'My documents' }));
     await user.click(screen.getByRole('button', { name: 'Ask documents' }));
     expect(screen.getByText('The office opens at nine [1].')).toBeVisible();
     expect(calls.filter((c) => c.path === '/api/chat/generate')).toHaveLength(1);
@@ -234,7 +235,7 @@ describe('real-data workspace', () => {
   it('hides administrator mutations for ordinary members', async () => {
     role = 'employee';
     const user = await signIn();
-    await user.click(screen.getByRole('button', { name: 'Documents' }));
+    await user.click(screen.getByRole('button', { name: 'My documents' }));
     expect(screen.queryByLabelText('Add a document')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Upload and index/ })).not.toBeInTheDocument();
   });
@@ -247,7 +248,7 @@ describe('real-data workspace', () => {
       path === '/api/documents/list'
         ? json({ detail: 'Could not validate credentials' }, 401)
         : undefined;
-    await user.click(screen.getByRole('button', { name: 'Documents' }));
+    await user.click(screen.getByRole('button', { name: 'My documents' }));
     await user.click(screen.getByRole('button', { name: 'Refresh documents' }));
     await screen.findByRole('heading', { name: 'Welcome back.' });
     expect(screen.queryByText('The office opens at nine [1].')).not.toBeInTheDocument();
@@ -280,7 +281,7 @@ it('requires a list refresh after an uncertain upload without retrying it', asyn
   customize = (path) =>
     path === '/api/documents/upload' ? Promise.reject(new TypeError('Connection lost')) : undefined;
   const user = await signIn();
-  await user.click(screen.getByRole('button', { name: 'Documents' }));
+  await user.click(screen.getByRole('button', { name: 'My documents' }));
   await waitFor(() => expect(screen.getByLabelText('Add a document')).toBeEnabled());
   await user.upload(
     screen.getByLabelText('Add a document'),
@@ -325,7 +326,7 @@ it('blocks another delete after a gateway timeout until the list is refreshed', 
       ? new Response('Gateway timeout', { status: 504 })
       : undefined;
   const user = await signIn();
-  await user.click(screen.getByRole('button', { name: 'Documents' }));
+  await user.click(screen.getByRole('button', { name: 'My documents' }));
   await user.click(await screen.findByRole('button', { name: 'Delete policy.txt' }));
   const modal = screen.getByRole('dialog');
   await user.click(within(modal).getByRole('button', { name: 'Delete document' }));
@@ -455,4 +456,59 @@ it('filters the account list by email', async () => {
   await user.type(screen.getByLabelText('Find a member'), 'staff');
   expect(screen.queryByRole('heading', { name: 'owner@example.com' })).not.toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'staff@example.com' })).toBeInTheDocument();
+});
+
+it('filters personal documents and scopes chat to the selected document', async () => {
+  role = 'employee';
+  docs = [
+    {
+      id: 12,
+      title: 'My offer.txt',
+      visibility: 'personal',
+      recipient_ids: [1],
+      enterprise_id: 7,
+      created_at: '2026-11-12T09:00:00Z',
+    },
+    {
+      id: 13,
+      title: 'Company policy.txt',
+      visibility: 'company',
+      enterprise_id: 7,
+      created_at: '2026-11-12T09:00:00Z',
+    },
+  ];
+  const user = await signIn();
+  await user.click(screen.getByRole('button', { name: 'My documents' }));
+  await user.click(screen.getByRole('button', { name: /Personal documents/ }));
+  expect(screen.getByRole('heading', { name: 'My offer.txt' })).toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Company policy.txt' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Manage access' })).not.toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Ask about this' }));
+  expect(screen.getByText('Searching only: My offer.txt')).toBeInTheDocument();
+  await user.type(screen.getByLabelText('Your question'), 'When do I start?');
+  await user.click(screen.getByRole('button', { name: /Ask question/ }));
+  await waitFor(() => expect(calls.some((c) => c.path === '/api/chat/generate')).toBe(true));
+  expect(
+    JSON.parse(String(calls.find((c) => c.path === '/api/chat/generate')!.options.body)),
+  ).toEqual({ question: 'When do I start?', document_id: 12 });
+  await user.click(screen.getByRole('button', { name: 'Search all my documents' }));
+  expect(screen.queryByText('Searching only: My offer.txt')).not.toBeInTheDocument();
+});
+
+it('assigns personal access atomically with the original upload', async () => {
+  const user = await signIn();
+  await user.click(screen.getByRole('button', { name: 'My documents' }));
+  await user.selectOptions(screen.getByLabelText('Document access'), 'personal');
+  await user.selectOptions(screen.getByLabelText('Employee'), '1');
+  await user.upload(
+    screen.getByLabelText('Add a document'),
+    new File(['Offer terms'], 'offer.txt', { type: 'text/plain' }),
+  );
+  await user.click(screen.getByRole('button', { name: /Upload and index/ }));
+  await screen.findByRole('heading', { name: 'offer.txt' });
+  const body = calls.find((c) => c.path === '/api/documents/upload')!.options.body as FormData;
+  expect(JSON.parse(String(body.get('access')))).toEqual({
+    visibility: 'personal',
+    recipient_ids: [1],
+  });
 });

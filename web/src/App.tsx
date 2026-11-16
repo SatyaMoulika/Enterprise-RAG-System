@@ -8,7 +8,7 @@ import {
   ThemeProvider,
 } from '@portfolio/porcelain-azure';
 import { ApiClient } from './api/client';
-import type { User } from './api/types';
+import type { DocumentRecord, User } from './api/types';
 import { AuthScreen } from './components/AuthScreen';
 import { ChatPanel } from './components/ChatPanel';
 import { DocumentsPanel } from './components/DocumentsPanel';
@@ -18,7 +18,8 @@ interface Session {
   user: User;
 }
 function Workspace({ session, onSignOut }: { session: Session; onSignOut: () => void }) {
-  const [view, setView] = useState('chat');
+  const [view, setView] = useState('documents');
+  const [chatDocument, setChatDocument] = useState<DocumentRecord | null>(null);
   const [count, setCount] = useState<number | null>(null);
   const api = useMemo(() => new ApiClient(session.token, onSignOut), [session.token, onSignOut]);
   return (
@@ -31,7 +32,7 @@ function Workspace({ session, onSignOut }: { session: Session; onSignOut: () => 
           <span className="text-xl font-extrabold tracking-tight">
             atlas<span className="text-azure"> ✧</span>
           </span>
-          <span className="ml-3 text-[11px] text-muted">Document workspace</span>
+          <span className="ml-3 text-[11px] text-muted">Employee knowledge hub</span>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <MotionToggle />
@@ -48,7 +49,7 @@ function Workspace({ session, onSignOut }: { session: Session; onSignOut: () => 
           <div className="hidden border-b border-line p-5 md:block">
             <Eyebrow>Workspace #{session.user.enterprise_id}</Eyebrow>
             <div className="mt-3">
-              <Badge>{session.user.role === 'admin' ? 'Administrator' : 'Member'}</Badge>
+              <Badge>{session.user.role === 'admin' ? 'Administrator' : 'Employee'}</Badge>
             </div>
             <p className="mt-3 text-[11px] text-muted">
               {count === null
@@ -59,21 +60,37 @@ function Workspace({ session, onSignOut }: { session: Session; onSignOut: () => 
           <Sidebar
             items={[
               { id: 'chat', label: 'Ask documents', icon: '✧' },
-              { id: 'documents', label: 'Documents', icon: '▤' },
+              { id: 'documents', label: 'My documents', icon: '▤' },
               ...(session.user.role === 'admin'
                 ? [{ id: 'members', label: 'Members', icon: '♧' }]
                 : []),
             ]}
             active={view}
-            onChange={setView}
+            onChange={(next) => {
+              setView(next);
+            }}
           />
         </aside>
         <main id="workspace-main" className="min-w-0 p-5 sm:p-8">
           <div hidden={view !== 'chat'}>
-            <ChatPanel api={api} onOpenDocuments={() => setView('documents')} />
+            <ChatPanel
+              key={chatDocument?.id || 'all'}
+              document={chatDocument}
+              onClearScope={() => setChatDocument(null)}
+              api={api}
+              onOpenDocuments={() => setView('documents')}
+            />
           </div>
           <div hidden={view !== 'documents'}>
-            <DocumentsPanel api={api} isAdmin={session.user.role === 'admin'} onCount={setCount} />
+            <DocumentsPanel
+              api={api}
+              isAdmin={session.user.role === 'admin'}
+              onCount={setCount}
+              onChat={(document) => {
+                setChatDocument(document);
+                setView('chat');
+              }}
+            />
           </div>
           {session.user.role === 'admin' && view === 'members' && (
             <MembersPanel api={api} currentUser={session.user} />
@@ -81,8 +98,8 @@ function Workspace({ session, onSignOut }: { session: Session; onSignOut: () => 
         </main>
       </div>
       <footer className="px-2 py-5 text-[10px] text-muted">
-        Workspace-scoped retrieval · Check answers against the source excerpts · Session and
-        conversation clear on refresh or sign-out.
+        Your documents and shared company knowledge · Check answers against the source excerpts ·
+        Session and conversation clear on refresh or sign-out.
       </footer>
     </div>
   );

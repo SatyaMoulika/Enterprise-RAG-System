@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class ChatRequest(BaseModel):
+    document_id: int | None = Field(default=None, gt=0)
     question: str = Field(min_length=1, max_length=2000)
 
     @field_validator("question")

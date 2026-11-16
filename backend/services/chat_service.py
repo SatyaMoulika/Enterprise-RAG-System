@@ -6,8 +6,14 @@ from services.retrieval_service import RetrievalService
 
 class ChatService:
     @classmethod
-    def ask(cls, question, enterprise_id, db):
-        chunks = RetrievalService.retrieve(question=question, enterprise_id=enterprise_id, db=db)
+    def ask(cls, question, enterprise_id, db, user=None, document_id=None):
+        chunks = RetrievalService.retrieve(
+            question=question,
+            enterprise_id=enterprise_id,
+            db=db,
+            user=user,
+            document_id=document_id,
+        )
         if not chunks:
             return {
                 "answer": NO_CONTEXT_ANSWER,

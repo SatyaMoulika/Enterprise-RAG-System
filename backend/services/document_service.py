@@ -15,7 +15,12 @@ from services.loader_service import LoaderService
 
 class DocumentService:
     @staticmethod
-    def upload_document(db, enterprise_id: int, file):
+    def upload_document(db, enterprise_id: int, file, access=None):
+        from schemas.document import DocumentAccess
+        from services.document_access import validate_access
+
+        access = access or DocumentAccess()
+        grants = validate_access(db, enterprise_id, access)
         filename = file.filename or ""
         # Reject path components on every OS, including Windows-style separators.
         if (
@@ -42,7 +47,13 @@ class DocumentService:
             text = LoaderService.extract_text(path)
             chunks = ChunkingService.chunk_text(text)
             vectors = EmbeddingService.embed_texts(chunks)
-            document = Document(enterprise_id=enterprise_id, title=filename, file_path=str(path))
+            document = Document(
+                enterprise_id=enterprise_id,
+                title=filename,
+                file_path=str(path),
+                visibility=access.visibility,
+                grants=grants,
+            )
             db.add(document)
             db.flush()
             for number, (chunk, vector) in enumerate(zip(chunks, vectors, strict=True)):
