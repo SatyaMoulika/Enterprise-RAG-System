@@ -13,6 +13,8 @@ class User(Base):
 
     enterprise_id: Mapped[int] = mapped_column(ForeignKey("enterprises.id"), nullable=False)
 
+    name: Mapped[str] = mapped_column(String(120), nullable=False, default="", server_default="")
+
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
 
     hashed_password: Mapped[str] = mapped_column(String, nullable=False)

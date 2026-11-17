@@ -19,6 +19,8 @@ interface Session {
 }
 function Workspace({ session, onSignOut }: { session: Session; onSignOut: () => void }) {
   const [view, setView] = useState('documents');
+  const [membersRevision, setMembersRevision] = useState(0);
+  const membersChanged = useCallback(() => setMembersRevision((n) => n + 1), []);
   const [chatDocument, setChatDocument] = useState<DocumentRecord | null>(null);
   const [count, setCount] = useState<number | null>(null);
   const api = useMemo(() => new ApiClient(session.token, onSignOut), [session.token, onSignOut]);
@@ -68,6 +70,7 @@ function Workspace({ session, onSignOut }: { session: Session; onSignOut: () => 
             active={view}
             onChange={(next) => {
               setView(next);
+              if (next === 'documents') membersChanged();
             }}
           />
         </aside>
@@ -86,6 +89,7 @@ function Workspace({ session, onSignOut }: { session: Session; onSignOut: () => 
               api={api}
               isAdmin={session.user.role === 'admin'}
               onCount={setCount}
+              membersRevision={membersRevision}
               onChat={(document) => {
                 setChatDocument(document);
                 setView('chat');
@@ -93,7 +97,7 @@ function Workspace({ session, onSignOut }: { session: Session; onSignOut: () => 
             />
           </div>
           {session.user.role === 'admin' && view === 'members' && (
-            <MembersPanel api={api} currentUser={session.user} />
+            <MembersPanel api={api} currentUser={session.user} onMembersChanged={membersChanged} />
           )}
         </main>
       </div>

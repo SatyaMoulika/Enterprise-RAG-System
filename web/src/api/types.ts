@@ -1,4 +1,5 @@
 export interface User {
+  name?: string;
   id: number;
   email: string;
   role: 'admin' | 'employee';
@@ -46,6 +47,7 @@ export interface Member extends User {
   created_at: string;
 }
 export interface CreateMemberPayload {
+  name?: string;
   email: string;
   password: string;
   role: 'admin' | 'employee';
