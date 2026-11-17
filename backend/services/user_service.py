@@ -24,13 +24,17 @@ class UserService:
         return enterprise_id
 
     @staticmethod
-    def create_user(db, email, password, role, current_user):
+    def create_user(db, email, password, role, current_user, name=""):
         password_hash = hash_password(password)
         enterprise_id = UserService._lock_and_authorize(db, current_user)
         if UserRepository.get_by_email(db, email):
             raise ValueError("An account already uses this email")
         user = User(
-            email=email, hashed_password=password_hash, role=role, enterprise_id=enterprise_id
+            email=email,
+            name=name,
+            hashed_password=password_hash,
+            role=role,
+            enterprise_id=enterprise_id,
         )
         try:
             return UserRepository.create(db, user)

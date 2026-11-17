@@ -128,3 +128,30 @@ def test_inactive_member_status_is_real_server_data(client, account, db):
     db.commit()
     rows = client.get("/users/get_all_users", headers=account).json()
     assert next(row for row in rows if row["id"] == member["id"])["is_active"] is False
+
+
+def test_member_name_is_saved_trimmed_and_returned(client, account):
+    result = client.post(
+        "/users/create_user",
+        headers=account,
+        json={
+            "name": "  Alice Morgan  ",
+            "email": "named@example.com",
+            "password": "test password 123",
+            "role": "employee",
+        },
+    )
+    assert result.status_code == 200
+    assert result.json()["name"] == "Alice Morgan"
+    members = client.get("/users/get_all_users", headers=account).json()
+    assert next(m for m in members if m["email"] == "named@example.com")["name"] == "Alice Morgan"
+    too_long = client.post(
+        "/users/create_user",
+        headers=account,
+        json={
+            "name": "x" * 121,
+            "email": "long@example.com",
+            "password": "test password 123",
+        },
+    )
+    assert too_long.status_code == 422

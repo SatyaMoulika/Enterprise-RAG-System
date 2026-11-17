@@ -17,11 +17,13 @@ export function DocumentsPanel({
   isAdmin,
   onCount,
   onChat,
+  membersRevision,
 }: {
   api: ApiClient;
   isAdmin: boolean;
   onCount: (count: number) => void;
   onChat?: (document: DocumentRecord) => void;
+  membersRevision?: number;
 }) {
   const [access, setAccess] = useState<DocumentAccess>({
     visibility: 'company',
@@ -94,6 +96,10 @@ export function DocumentsPanel({
   async function upload(event: FormEvent) {
     event.preventDefault();
     if (pending.current || !limits) return;
+    if (access.visibility !== 'company' && !access.recipient_ids.length) {
+      setError('Select at least one employee before uploading.');
+      return;
+    }
     if (!selected) {
       setError('Choose a PDF or text document first.');
       return;
@@ -190,6 +196,7 @@ export function DocumentsPanel({
               </div>
             )}
             <DocumentAccessFields
+              membersRevision={membersRevision}
               api={api}
               value={access}
               onChange={setAccess}
@@ -298,6 +305,10 @@ export function DocumentsPanel({
             onSubmit={async (e) => {
               e.preventDefault();
               if (savingAccess) return;
+              if (editAccess.visibility !== 'company' && !editAccess.recipient_ids.length) {
+                setError('Select at least one employee before saving access.');
+                return;
+              }
               setSavingAccess(true);
               setError('');
               try {
@@ -315,6 +326,7 @@ export function DocumentsPanel({
           >
             <h2 className="font-bold">Manage access · {editing.title}</h2>
             <DocumentAccessFields
+              membersRevision={membersRevision}
               api={api}
               value={editAccess}
               onChange={setEditAccess}
