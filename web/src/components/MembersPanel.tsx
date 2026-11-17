@@ -5,7 +5,15 @@ import type { Member, User } from '../api/types';
 import { Feedback } from './Feedback';
 import { ConfirmationDialog } from './ConfirmationDialog';
 
-export function MembersPanel({ api, currentUser }: { api: ApiClient; currentUser: User }) {
+export function MembersPanel({
+  api,
+  currentUser,
+  onMembersChanged,
+}: {
+  api: ApiClient;
+  currentUser: User;
+  onMembersChanged?: () => void;
+}) {
   const [members, setMembers] = useState<Member[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -56,6 +64,7 @@ export function MembersPanel({ api, currentUser }: { api: ApiClient; currentUser
     event.preventDefault();
     if (pending.current || uncertain) return;
     const values = new FormData(event.currentTarget);
+    const name = String(values.get('name') || '').trim();
     const email = String(values.get('email') || '').trim();
     const password = String(values.get('password') || '');
     const role = values.get('role') === 'admin' ? 'admin' : 'employee';
@@ -64,9 +73,13 @@ export function MembersPanel({ api, currentUser }: { api: ApiClient; currentUser
     setError('');
     setNotice('');
     try {
-      const result = await api.createMember({ email, password, role }, lifetime.current?.signal);
+      const result = await api.createMember(
+        { name, email, password, role },
+        lifetime.current?.signal,
+      );
       form.current?.reset();
       setNotice(`${result.email} can now sign in. Share the initial password securely.`);
+      onMembersChanged?.();
       await load();
     } catch (error) {
       if (!isCancelled(error)) {
@@ -89,6 +102,7 @@ export function MembersPanel({ api, currentUser }: { api: ApiClient; currentUser
       await api.removeMember(selected.id, lifetime.current?.signal);
       setNotice(`${selected.email} has been removed from the workspace.`);
       setSelected(null);
+      onMembersChanged?.();
       await load();
     } catch (error) {
       if (!isCancelled(error)) {
@@ -101,7 +115,7 @@ export function MembersPanel({ api, currentUser }: { api: ApiClient; currentUser
     }
   }
   const filtered = members?.filter((member) =>
-    member.email.toLowerCase().includes(search.trim().toLowerCase()),
+    `${member.name || ''} ${member.email}`.toLowerCase().includes(search.trim().toLowerCase()),
   );
   return (
     <section aria-labelledby="members-heading">
@@ -131,6 +145,14 @@ export function MembersPanel({ api, currentUser }: { api: ApiClient; currentUser
         </p>
         <form ref={form} onSubmit={add} aria-label="Add member" className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
+            <InputField
+              label="Member name"
+              name="name"
+              maxLength={120}
+              placeholder="Full name (optional)"
+              autoComplete="off"
+              disabled={busy || removing || uncertain}
+            />
             <InputField
               label="Member email"
               name="email"
@@ -217,7 +239,8 @@ export function MembersPanel({ api, currentUser }: { api: ApiClient; currentUser
               <Card className="flex flex-wrap items-center justify-between gap-4 p-4 sm:p-5">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="break-all text-sm font-bold">{member.email}</h3>
+                    <h3 className="break-all text-sm font-bold">{member.name || member.email}</h3>
+                    {member.name && <span className="text-xs text-muted">{member.email}</span>}
                     {member.id === currentUser.id && <Badge>You</Badge>}
                   </div>
                   <p className="mt-2 text-[11px] text-muted">

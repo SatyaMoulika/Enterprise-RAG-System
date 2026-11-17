@@ -35,3 +35,13 @@ API startup runs migration `0003`, adding document visibility and recipient gran
 ## Validation
 
 Backend tests cover tenant isolation, personal/restricted listing, protected files, scoped chat, all three retrieval strategies plus the optional reranker boundary, grant replacement/revocation, account removal and email reuse, invalid recipients and migration compatibility. Frontend tests cover category filtering, scoped chat and atomic personal upload data as well as existing flows. Browser checks use the real app/API with a disposable SQLite database and stubbed AI providers: employee isolation, text preview, scoped chat, admin reassignment and revocation, desktop/mobile layouts. Real model answer accuracy, browser PDF rendering and PostgreSQL concurrency/load require separate verification before production deployment.
+
+## Member selection and display names
+
+Member creation includes an optional name (up to 120 characters); names are trimmed and shown alongside email addresses in the member list and recipient picker. Existing accounts without a name continue to display their email. Migration `0004` adds the name column without changing identity, passwords or document grants.
+
+Restricted sharing uses individual checkboxes, name/email search and a selected-count label. Tick two or more employees normally; no Ctrl/Cmd selection is needed. Filtering the list does not clear checked recipients. Personal sharing remains a single-employee dropdown.
+
+Creating or removing members invalidates mounted recipient pickers. Returning to My documents, refocusing the browser window or clicking Refresh members fetches current active accounts. Obsolete requests are cancelled/ignored, and unavailable accounts are removed from current selections with a review notice. Upload/save rejects an empty personal/restricted recipient selection. Changes from another session are picked up on these refresh triggers, not through live push notifications; the backend always validates recipients again before saving.
+
+After merging, pull main and rebuild both `api` and `web` using the upgrade command above. No document re-index or re-upload is needed for these member-selection changes.

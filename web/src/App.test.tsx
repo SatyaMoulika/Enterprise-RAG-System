@@ -45,6 +45,7 @@ beforeEach(() => {
         const values = JSON.parse(String(options.body));
         const member: Member = {
           id: Math.max(0, ...members.map((m) => m.id)) + 1,
+          name: values.name,
           email: values.email,
           role: values.role,
           enterprise_id: 7,
@@ -342,15 +343,21 @@ it('offers Members to administrators and creates a real account through the API'
   const user = await signIn();
   await user.click(screen.getByRole('button', { name: 'Members' }));
   await screen.findByRole('heading', { name: 'Your workspace team.' });
+  await user.type(screen.getByLabelText('Member name'), 'Sam Taylor');
   await user.type(screen.getByLabelText('Member email'), 'staff@example.com');
   await user.type(screen.getByLabelText('Initial password'), 'initial password');
   await user.click(screen.getByRole('button', { name: 'Add member ↗' }));
-  expect(await screen.findByRole('heading', { name: 'staff@example.com' })).toBeInTheDocument();
+  expect(await screen.findByRole('heading', { name: 'Sam Taylor' })).toBeInTheDocument();
   expect(screen.getByLabelText('Initial password')).toHaveValue('');
   expect(calls.filter((c) => c.path === '/api/users/create_user')).toHaveLength(1);
   expect(
     JSON.parse(String(calls.find((c) => c.path === '/api/users/create_user')?.options.body)),
-  ).toEqual({ email: 'staff@example.com', password: 'initial password', role: 'employee' });
+  ).toEqual({
+    name: 'Sam Taylor',
+    email: 'staff@example.com',
+    password: 'initial password',
+    role: 'employee',
+  });
 });
 it('does not expose Members to ordinary workspace members', async () => {
   role = 'employee';

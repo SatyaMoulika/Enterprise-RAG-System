@@ -27,6 +27,7 @@ def create_user(
         return UserService.create_user(
             db=db,
             email=payload.email,
+            name=payload.name,
             password=payload.password,
             role=payload.role,
             current_user=current_user,
