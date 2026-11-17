@@ -1,0 +1,265 @@
+{
+  "description": "Twenty manually labelled fictional checker challenges: ten valid and ten invalid answers. Labels are development expectations; reviewer decisions still need inspection.",
+  "cases": [
+    {
+      "id": "bob-gross-valid",
+      "question": "What is Bob Reed monthly gross and take-home pay?",
+      "answer": "Monthly gross is INR 80,000, derived as INR 960,000 / 12, before deductions [1]. Take-home pay cannot be determined because deductions are unspecified [1].",
+      "excerpts": [
+        {
+          "marker": 1,
+          "title": "bob-gross.txt",
+          "excerpt": "Bob Reed: annual fixed gross salary INR 960,000, paid in twelve equal monthly installments before deductions. Deductions and net pay are not specified."
+        }
+      ],
+      "expected_verdict": "supported"
+    },
+    {
+      "id": "bob-gross-invalid",
+      "question": "What is Bob Reed monthly gross and take-home pay?",
+      "answer": "Bob Reed receives INR 80,000 after deductions [1].",
+      "excerpts": [
+        {
+          "marker": 1,
+          "title": "bob-gross.txt",
+          "excerpt": "Bob Reed: annual fixed gross salary INR 960,000, paid in twelve equal monthly installments before deductions. Deductions and net pay are not specified."
+        }
+      ],
+      "expected_verdict": "unsupported"
+    },
+    {
+      "id": "explicit-net-valid",
+      "question": "What is Mira Chen final net pay for April 2027?",
+      "answer": "Mira Chen final net pay for April 2027 is INR 70,000 [1].",
+      "excerpts": [
+        {
+          "marker": 1,
+          "title": "explicit-net.txt",
+          "excerpt": "Mira Chen: gross monthly salary INR 80,000. The payslip explicitly states final net pay INR 70,000 for April 2027."
+        }
+      ],
+      "expected_verdict": "supported"
+    },
+    {
+      "id": "explicit-net-invalid",
+      "question": "What is Mira Chen final net pay for April 2027?",
+      "answer": "Mira Chen final net pay for April 2027 is INR 80,000 [1].",
+      "excerpts": [
+        {
+          "marker": 1,
+          "title": "explicit-net.txt",
+          "excerpt": "Mira Chen: gross monthly salary INR 80,000. The payslip explicitly states final net pay INR 70,000 for April 2027."
+        }
+      ],
+      "expected_verdict": "unsupported"
+    },
+    {
+      "id": "complete-deductions-valid",
+      "question": "Calculate Dev Patel net pay for April 2027.",
+      "answer": "Derived net pay is INR 70,000: INR 80,000 - INR 8,000 - INR 2,000, using all April deductions [1].",
+      "excerpts": [
+        {
+          "marker": 1,
+          "title": "complete-deductions.txt",
+          "excerpt": "Dev Patel: April 2027 monthly gross salary INR 80,000; income tax INR 8,000 and insurance INR 2,000 for that month. These are all deductions for this payslip; no other deductions or adjustments apply."
+        }
+      ],
+      "expected_verdict": "supported"
+    },
+    {
+      "id": "complete-deductions-invalid",
+      "question": "Calculate Dev Patel net pay for April 2027.",
+      "answer": "Dev Patel net pay is INR 72,000 after all deductions [1].",
+      "excerpts": [
+        {
+          "marker": 1,
+          "title": "complete-deductions.txt",
+          "excerpt": "Dev Patel: April 2027 monthly gross salary INR 80,000; income tax INR 8,000 and insurance INR 2,000 for that month. These are all deductions for this payslip; no other deductions or adjustments apply."
+        }
+      ],
+      "expected_verdict": "unsupported"
+    },
+    {
+      "id": "partial-deductions-valid",
+      "question": "What is Nora Singh final take-home pay?",
+      "answer": "Final take-home pay cannot be determined because additional deductions are unspecified; gross pay is INR 80,000 [1].",
+      "excerpts": [
+        {
+          "marker": 1,
+          "title": "partial-deductions.txt",
+          "excerpt": "Nora Singh: April monthly gross salary INR 80,000. Listed income tax is INR 8,000. Additional deductions may apply but their amounts are not provided."
+        }
+      ],
+      "expected_verdict": "supported"
+    },
+    {
+      "id": "partial-deductions-invalid",
+      "question": "What is Nora Singh final take-home pay?",
+      "answer": "Nora Singh final take-home pay is INR 72,000 [1].",
+      "excerpts": [
+        {
+          "marker": 1,
+          "title": "partial-deductions.txt",
+          "excerpt": "Nora Singh: April monthly gross salary INR 80,000. Listed income tax is INR 8,000. Additional deductions may apply but their amounts are not provided."
+        }
+      ],
+      "expected_verdict": "unsupported"
+    },
+    {
+      "id": "annual-period-valid",
+      "question": "What is Omar Ali monthly net pay?",
+      "answer": "Derived monthly net pay is INR 70,000: (INR 960,000 - INR 120,000) / 12 [1].",
+      "excerpts": [
+        {
+          "marker": 1,
+          "title": "annual-period.txt",
+          "excerpt": "Omar Ali: annual gross pay INR 960,000 in twelve equal installments. Total annual deductions INR 120,000 are split equally across those same installments. No other deductions apply."
+        }
+      ],
+      "expected_verdict": "supported"
+    },
+    {
+      "id": "annual-period-invalid",
+      "question": "What is Omar Ali monthly net pay?",
+      "answer": "Omar Ali monthly net pay is negative INR 40,000: INR 80,000 minus INR 120,000 [1].",
+      "excerpts": [
+        {
+          "marker": 1,
+          "title": "annual-period.txt",
+          "excerpt": "Omar Ali: annual gross pay INR 960,000 in twelve equal installments. Total annual deductions INR 120,000 are split equally across those same installments. No other deductions apply."
+        }
+      ],
+      "expected_verdict": "unsupported"
+    },
+    {
+      "id": "bonus-cap-valid",
+      "question": "Is Lina Park guaranteed a bonus of INR 50,000?",
+      "answer": "No. The discretionary bonus is capped at INR 50,000 and subject to performance review; it is not guaranteed [1].",
+      "excerpts": [
+        {
+          "marker": 1,
+          "title": "bonus-cap.txt",
+          "excerpt": "Lina Park: discretionary annual bonus up to INR 50,000, subject to performance review. No minimum or guaranteed bonus is promised."
+        }
+      ],
+      "expected_verdict": "supported"
+    },
+    {
+      "id": "bonus-cap-invalid",
+      "question": "Is Lina Park guaranteed a bonus of INR 50,000?",
+      "answer": "Lina Park is guaranteed an annual bonus of INR 50,000 [1].",
+      "excerpts": [
+        {
+          "marker": 1,
+          "title": "bonus-cap.txt",
+          "excerpt": "Lina Park: discretionary annual bonus up to INR 50,000, subject to performance review. No minimum or guaranteed bonus is promised."
+        }
+      ],
+      "expected_verdict": "unsupported"
+    },
+    {
+      "id": "reimbursement-valid",
+      "question": "Does Evan Roy have a guaranteed monthly take-home salary of INR 85,000?",
+      "answer": "No. Travel reimbursement is not salary and requires receipts; take-home salary is unspecified [1].",
+      "excerpts": [
+        {
+          "marker": 1,
+          "title": "reimbursement.txt",
+          "excerpt": "Evan Roy: monthly gross salary INR 80,000. Receipted travel reimbursement is capped at INR 5,000 monthly and is not salary. Net salary and deductions are unspecified."
+        }
+      ],
+      "expected_verdict": "supported"
+    },
+    {
+      "id": "reimbursement-invalid",
+      "question": "Does Evan Roy have a guaranteed monthly take-home salary of INR 85,000?",
+      "answer": "Evan Roy guaranteed monthly take-home salary is INR 85,000 including reimbursement [1].",
+      "excerpts": [
+        {
+          "marker": 1,
+          "title": "reimbursement.txt",
+          "excerpt": "Evan Roy: monthly gross salary INR 80,000. Receipted travel reimbursement is capped at INR 5,000 monthly and is not salary. Net salary and deductions are unspecified."
+        }
+      ],
+      "expected_verdict": "unsupported"
+    },
+    {
+      "id": "different-person-valid",
+      "question": "What is Isha Rao monthly take-home pay?",
+      "answer": "Isha Rao take-home pay is unspecified; INR 100,000 is gross pay, and Karl Reed net pay does not establish hers [1].",
+      "excerpts": [
+        {
+          "marker": 1,
+          "title": "different-person.txt",
+          "excerpt": "Isha Rao: monthly gross salary INR 100,000; net pay is unspecified. Karl Reed: explicit final monthly net pay INR 70,000. These are different employees."
+        }
+      ],
+      "expected_verdict": "supported"
+    },
+    {
+      "id": "different-person-invalid",
+      "question": "What is Isha Rao monthly take-home pay?",
+      "answer": "Isha Rao monthly take-home pay is INR 70,000 [1].",
+      "excerpts": [
+        {
+          "marker": 1,
+          "title": "different-person.txt",
+          "excerpt": "Isha Rao: monthly gross salary INR 100,000; net pay is unspecified. Karl Reed: explicit final monthly net pay INR 70,000. These are different employees."
+        }
+      ],
+      "expected_verdict": "unsupported"
+    },
+    {
+      "id": "unknown-installments-valid",
+      "question": "What is Theo Sen contractual gross amount per salary installment?",
+      "answer": "The contractual amount per installment cannot be determined without the payment schedule [1].",
+      "excerpts": [
+        {
+          "marker": 1,
+          "title": "unknown-installments.txt",
+          "excerpt": "Theo Sen: annual gross salary INR 900,000. The payment schedule and number of salary installments are not specified."
+        }
+      ],
+      "expected_verdict": "supported"
+    },
+    {
+      "id": "unknown-installments-invalid",
+      "question": "What is Theo Sen contractual gross amount per salary installment?",
+      "answer": "Theo Sen contractual salary installment is INR 75,000, with twelve installments guaranteed [1].",
+      "excerpts": [
+        {
+          "marker": 1,
+          "title": "unknown-installments.txt",
+          "excerpt": "Theo Sen: annual gross salary INR 900,000. The payment schedule and number of salary installments are not specified."
+        }
+      ],
+      "expected_verdict": "unsupported"
+    },
+    {
+      "id": "currency-mismatch-valid",
+      "question": "Calculate Ana Kim final monthly net pay.",
+      "answer": "Final monthly net pay cannot be determined: currencies differ and the conversion rate and complete deductions are missing [1].",
+      "excerpts": [
+        {
+          "marker": 1,
+          "title": "currency-mismatch.txt",
+          "excerpt": "Ana Kim: gross monthly salary USD 4,000. Deductions are stated as INR 8,000. No conversion rate, complete deduction list or net pay is specified."
+        }
+      ],
+      "expected_verdict": "supported"
+    },
+    {
+      "id": "currency-mismatch-invalid",
+      "question": "Calculate Ana Kim final monthly net pay.",
+      "answer": "Ana Kim final monthly net pay is USD 3,992 after subtracting INR 8,000 [1].",
+      "excerpts": [
+        {
+          "marker": 1,
+          "title": "currency-mismatch.txt",
+          "excerpt": "Ana Kim: gross monthly salary USD 4,000. Deductions are stated as INR 8,000. No conversion rate, complete deduction list or net pay is specified."
+        }
+      ],
+      "expected_verdict": "unsupported"
+    }
+  ]
+}
