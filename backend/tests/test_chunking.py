@@ -143,3 +143,49 @@ def test_real_pdf_line_wraps_are_normalized(tmp_path):
     text = LoaderService.extract_text(path)
     assert text == "Regulatory frameworks address privacy, bias and accountability."
     assert ChunkingService.chunk_text(text) == [text]
+
+
+@pytest.mark.parametrize("separator", ["\n", "\n\n"])
+def test_vertical_pdf_words_become_readable_complete_sentences(separator):
+    sentences = [
+        "Alice Morgan is offered a full-time position as an AI Engineer in the Applied AI team.",
+        "Her annual fixed gross salary is INR 1,200,000, paid in twelve monthly installments before deductions.",
+        "The probation period lasts three calendar months from the joining date.",
+    ]
+    text = " ".join(sentences)
+    normalized = normalize_pdf_text(separator.join(text.split()))
+    assert normalized == text
+    assert ChunkingService.chunk_text(normalized) == sentences
+
+
+def test_word_stream_detection_does_not_flatten_explicit_lists_or_tables():
+    lines = ["Item"] * 35 + ["Complete.", "Another."]
+    for structure in ("- Keep this list item.", "Code\tMeaning"):
+        result = normalize_pdf_text("\n\n".join([*lines, structure]))
+        assert "\n\n" in result
+        assert structure in result
+
+
+def test_pdf_cleanup_is_applied_per_page(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    import services.loader_service as loader
+
+    sentence = (
+        "Employees receive paid annual leave under the current policy. "
+        "Manager approval is required for planned leave and exceptions must be reviewed before any request is accepted by the responsible manager."
+    )
+    vertical = "\n\n".join(sentence.split())
+    monkeypatch.setattr(
+        loader,
+        "PdfReader",
+        lambda path: SimpleNamespace(
+            is_encrypted=False,
+            pages=[
+                SimpleNamespace(extract_text=lambda: "Cover page with normal paragraph layout."),
+                SimpleNamespace(extract_text=lambda: vertical),
+            ],
+        ),
+    )
+    result = loader.LoaderService.extract_text(tmp_path / "vertical.pdf")
+    assert result == "Cover page with normal paragraph layout.\n\n" + sentence
