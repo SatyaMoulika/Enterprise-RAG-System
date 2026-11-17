@@ -45,6 +45,7 @@ def evaluate_answers(
     excerpt_order: str = "ranked",
     order_seed: int = 0,
     answer_check: Callable | None = None,
+    answer_override: Callable | None = None,
 ) -> dict:
     if (
         not profiles
@@ -137,11 +138,22 @@ def evaluate_answers(
                 result["prompt_version"] = version
                 start = time.perf_counter()
                 try:
-                    output = (
-                        generator(query["question"], context)
-                        if selected
-                        else GeneratedAnswer(NO_CONTEXT_ANSWER)
+                    calculation = (
+                        answer_override(query["question"], [c.context() for c in selected])
+                        if selected and answer_override
+                        else None
                     )
+                    if calculation is not None:
+                        output = GeneratedAnswer(calculation["answer"])
+                        result["financial_calculation"] = calculation
+                        result["answer_origin"] = "deterministic_salary"
+                    else:
+                        output = (
+                            generator(query["question"], context)
+                            if selected
+                            else GeneratedAnswer(NO_CONTEXT_ANSWER)
+                        )
+                        result["answer_origin"] = "model" if selected else "no_context"
                     if not isinstance(output, GeneratedAnswer) or not output.text.strip():
                         raise ValueError("Invalid generated answer")
                     result.update(
