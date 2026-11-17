@@ -344,7 +344,7 @@ def test_prompt_variants_preserve_user_context_and_sampling_controls():
     values = [
         chat_payload("Compare policies", context, "model", 0, prompt_version=v) for v in PROMPTS
     ]
-    assert len({v["messages"][0]["content"] for v in values}) == 3
+    assert len({v["messages"][0]["content"] for v in values}) == len(PROMPTS)
     assert all(v["messages"][1] == values[0]["messages"][1] for v in values)
     assert all(v["options"] == {"temperature": 0} for v in values)
     assert context in values[0]["messages"][1]["content"]

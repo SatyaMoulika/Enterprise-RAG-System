@@ -25,8 +25,8 @@ class LoaderService:
                     size += len(part) + 1
                     if size > settings.MAX_TEXT_CHARACTERS:
                         raise UploadTooLarge("Extracted document exceeds the text limit")
-                    parts.append(part)
-                text = normalize_pdf_text("\n".join(parts))
+                    parts.append(normalize_pdf_text(part))
+                text = "\n\n".join(parts)
             else:
                 raise InvalidDocument("Only UTF-8 .txt and text-based .pdf files are supported")
         except (InvalidDocument, UploadTooLarge):
