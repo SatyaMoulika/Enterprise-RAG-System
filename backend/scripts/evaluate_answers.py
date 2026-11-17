@@ -14,6 +14,7 @@ from evaluation.answers import GeneratedAnswer, evaluate_answers, summarize_revi
 from evaluation.salary_support import review_salary_answer  # noqa: E402
 from services.generation_protocol import PROMPTS, chat_payload  # noqa: E402
 from services.reranking_service import rerank_chunks  # noqa: E402
+from services.salary_calculator import salary_answer  # noqa: E402
 
 
 def main():
@@ -62,6 +63,11 @@ def main():
         action="store_true",
         help="Experimental extra model call per generated answer; manual review still required",
     )
+    parser.add_argument(
+        "--financial-calculations",
+        action="store_true",
+        help="Evaluate the bounded deterministic salary path (no live setting changes)",
+    )
     args = parser.parse_args()
     if args.review_file:
         try:
@@ -95,6 +101,8 @@ def main():
         parser.error(
             "Prompt comparison requires known unique versions, --profiles baseline and --temperature 0"
         )
+    if args.financial_calculations and (versions or profiles != ("baseline",)):
+        parser.error("Financial calculations require --profiles baseline and no prompt comparison")
     try:
         data = json.loads(args.dataset.read_text())
         identities = [row["id"] for row in data["chunks"]]
@@ -182,6 +190,7 @@ def main():
                 generate,
                 strategy=args.strategy,
                 profiles=profiles,
+                answer_override=salary_answer if args.financial_calculations else None,
                 answer_check=(lambda q, a, e: review_salary_answer(q, a, e, review))
                 if args.salary_support_check
                 else None,
@@ -207,6 +216,7 @@ def main():
         "answer": args.answer_model,
         "reranker": args.reranker_model if "reranked" in profiles else None,
     }
+    report["financial_calculations"] = args.financial_calculations
     report["generation_temperature"] = args.temperature
     report["salary_support_check"] = {
         "enabled": args.salary_support_check,

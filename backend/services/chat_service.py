@@ -1,7 +1,9 @@
+from core.config import settings
 from services.generation_protocol import NO_CONTEXT_ANSWER
 from services.llm_service import LLMService
 from services.prompt_service import PromptService
 from services.retrieval_service import RetrievalService
+from services.salary_calculator import salary_answer
 
 
 class ChatService:
@@ -20,7 +22,16 @@ class ChatService:
                 "sources": [],
                 "citations": [],
             }
-        answer = LLMService.generate(question=question, context=PromptService.build_context(chunks))
+        calculation = (
+            salary_answer(question, chunks, getattr(user, "name", None))
+            if settings.FINANCIAL_CALCULATIONS_ENABLED
+            else None
+        )
+        answer = (
+            calculation["answer"]
+            if calculation is not None
+            else LLMService.generate(question=question, context=PromptService.build_context(chunks))
+        )
         return {
             "answer": answer,
             "sources": list(dict.fromkeys(c["document_id"] for c in chunks)),
