@@ -44,6 +44,7 @@ def evaluate_answers(
     prompt_generators: dict[str, Callable] | None = None,
     excerpt_order: str = "ranked",
     order_seed: int = 0,
+    answer_check: Callable | None = None,
 ) -> dict:
     if (
         not profiles
@@ -164,6 +165,17 @@ def evaluate_answers(
                             "error": "Generation failed. Check the model/provider; no answer was fabricated.",
                         }
                     )
+                if answer_check is not None and result["status"] == "ok":
+                    try:
+                        result["salary_support_review"] = answer_check(
+                            query["question"], result["answer"], result["excerpts"]
+                        )
+                    except Exception:
+                        result["salary_support_review"] = {
+                            "status": "check_error",
+                            "verdict": None,
+                            "human_review_required": True,
+                        }
                 results.append(result)
     return {
         "dataset_description": data.get("description"),

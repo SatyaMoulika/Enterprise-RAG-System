@@ -11,6 +11,7 @@ import httpx
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from evaluation.answers import GeneratedAnswer, evaluate_answers, summarize_reviews  # noqa: E402
+from evaluation.salary_support import review_salary_answer  # noqa: E402
 from services.generation_protocol import PROMPTS, chat_payload  # noqa: E402
 from services.reranking_service import rerank_chunks  # noqa: E402
 
@@ -56,6 +57,11 @@ def main():
         "--excerpt-order", choices=["ranked", "reversed", "shuffled"], default="ranked"
     )
     parser.add_argument("--order-seed", type=int, default=0)
+    parser.add_argument(
+        "--salary-support-check",
+        action="store_true",
+        help="Experimental extra model call per generated answer; manual review still required",
+    )
     args = parser.parse_args()
     if args.review_file:
         try:
@@ -161,6 +167,14 @@ def main():
 
             return GeneratedAnswer(answer, count("prompt_eval_count"), count("eval_count"))
 
+        def review(payload):
+            response = client.post(
+                args.ollama_url.rstrip("/") + "/api/chat",
+                json={**payload, "model": args.answer_model},
+            )
+            response.raise_for_status()
+            return response.json()["message"]["content"]
+
         try:
             report = evaluate_answers(
                 data,
@@ -168,6 +182,9 @@ def main():
                 generate,
                 strategy=args.strategy,
                 profiles=profiles,
+                answer_check=(lambda q, a, e: review_salary_answer(q, a, e, review))
+                if args.salary_support_check
+                else None,
                 excerpt_order=args.excerpt_order,
                 order_seed=args.order_seed,
                 prompt_generators={
@@ -191,6 +208,13 @@ def main():
         "reranker": args.reranker_model if "reranked" in profiles else None,
     }
     report["generation_temperature"] = args.temperature
+    report["salary_support_check"] = {
+        "enabled": args.salary_support_check,
+        "model": args.answer_model if args.salary_support_check else None,
+        "temperature": 0 if args.salary_support_check else None,
+        "version": "salary-claim-review-v1",
+        "production_enforcement": False,
+    }
     print(json.dumps(report, indent=2))
 
 

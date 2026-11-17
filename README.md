@@ -103,3 +103,5 @@ See [the release roadmap](docs/release-roadmap.md). Deploy only after validating
 ### Employee document hub
 
 Employees can browse personal letters and company/restricted documents assigned by administrators, preview/download originals, and chat across their accessible library or one document. See [employee hub setup and access rules](docs/employee-document-hub.md), including migration behaviour for existing documents and administrator access to personal files.
+
+For financial qualifier handling and the evaluation-only claim-support reviewer, see [salary grounding and regression checks](docs/salary-grounding.md). The reviewer does not enforce or rewrite production answers.
