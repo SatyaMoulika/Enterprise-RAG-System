@@ -66,3 +66,18 @@ def test_chat_instructions_and_response(monkeypatch):
 
     monkeypatch.setattr(httpx, "post", post)
     assert LLMService.generate("test", "context") == "Supported answer [1]."
+
+
+def test_context_keeps_citation_mapping_without_internal_chunk_labels():
+    from services.prompt_service import PromptService
+
+    value = PromptService.build_context(
+        [
+            {"title": "Offer.pdf", "chunk_index": 0, "chunk_text": "Your role is AI Engineer."},
+            {"title": "Appointment.pdf", "chunk_index": 12, "chunk_text": "Your manager is Maya."},
+        ]
+    )
+    assert value == (
+        "[1] Offer.pdf\nYour role is AI Engineer.\n\n[2] Appointment.pdf\nYour manager is Maya."
+    )
+    assert "(chunk" not in value
