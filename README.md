@@ -34,6 +34,8 @@ uv run --directory backend alembic upgrade head
 uv run --directory backend uvicorn main:app --reload
 ```
 
+To start the React workspace alongside the backend, follow the [React frontend setup](#react-frontend).
+
 The existing Streamlit client remains under `frontend/`. Install its optional dependencies and start it with:
 
 ```sh
