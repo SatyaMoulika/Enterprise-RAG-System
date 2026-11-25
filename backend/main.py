@@ -1,3 +1,7 @@
+import logging
+from time import perf_counter
+from uuid import uuid4
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -18,6 +22,32 @@ from core.errors import (
 from database.session import engine
 
 app = FastAPI(title=settings.APP_NAME, version="0.2.0")
+logger = logging.getLogger("uvicorn.error")
+
+
+@app.middleware("http")
+async def request_metrics(request: Request, call_next):
+    request_id = uuid4().hex
+    start = perf_counter()
+    status = 500
+    try:
+        response = await call_next(request)
+        status = response.status_code
+        response.headers["X-Request-ID"] = request_id
+        return response
+    finally:
+        route = getattr(request.scope.get("route"), "path", "unmatched")
+        # Never log bodies, questions, file names, credentials or query strings.
+        logger.info(
+            "request id=%s method=%s route=%s status=%s duration_ms=%.1f",
+            request_id,
+            request.method,
+            route,
+            status,
+            (perf_counter() - start) * 1000,
+        )
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
@@ -57,8 +87,9 @@ def readiness_check():
     try:
         with engine.connect() as connection:
             connection.execute(
-                text("SELECT embedding, embedding_model FROM document_chunks LIMIT 0")
+                text("SELECT embedding, embedding_model, page_start FROM document_chunks LIMIT 0")
             )
+            connection.execute(text("SELECT index_status FROM documents LIMIT 0"))
     except SQLAlchemyError:
         return JSONResponse(status_code=503, content={"status": "not_ready"})
     return {"status": "ready", "inference": "checked on use"}

@@ -11,7 +11,11 @@ from dependencies.auth import get_current_user, require_admin
 from models.document import Document
 from models.user import User
 from schemas.document import DocumentAccess, DocumentLimits, DocumentResponse
-from services.document_access import accessible_documents, validate_access
+from services.document_access import (
+    accessible_documents,
+    require_document_read_access,
+    validate_access,
+)
 from services.document_service import DocumentService
 
 document_router = APIRouter(prefix="/documents", tags=["Documents"])
@@ -21,6 +25,7 @@ document_router = APIRouter(prefix="/documents", tags=["Documents"])
 def upload_document(
     file: UploadFile,
     access: str = Form('{"visibility":"company"}'),
+    background: bool = Form(False),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
@@ -29,8 +34,35 @@ def upload_document(
     except ValidationError:
         raise HTTPException(422, "Invalid document access settings") from None
     return DocumentService.upload_document(
-        db=db, file=file, enterprise_id=current_user.enterprise_id, access=permissions
+        db=db,
+        file=file,
+        enterprise_id=current_user.enterprise_id,
+        access=permissions,
+        background=background,
     )
+
+
+@document_router.post("/{document_id}/reindex", response_model=DocumentResponse, status_code=202)
+def reindex_document(
+    document_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_admin)
+):
+    document = DocumentService.queue_reindex(db, current_user.enterprise_id, document_id)
+    if document is None:
+        raise HTTPException(404, "Document not found")
+    return document
+
+
+@document_router.post("/{document_id}/replace", response_model=DocumentResponse, status_code=202)
+def replace_document(
+    document_id: int,
+    file: UploadFile,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    document = DocumentService.replace_source(db, current_user.enterprise_id, document_id, file)
+    if document is None:
+        raise HTTPException(404, "Document not found")
+    return document
 
 
 @document_router.get("/limits", response_model=DocumentLimits)
@@ -85,17 +117,9 @@ def change_access(
 def get_file(
     document_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
-    document = (
-        db.query(Document)
-        .filter(
-            Document.id == document_id,
-            Document.enterprise_id == current_user.enterprise_id,
-            accessible_documents(current_user),
-        )
-        .first()
+    document = require_document_read_access(
+        db, document_id, current_user.enterprise_id, current_user
     )
-    if document is None:
-        raise HTTPException(404, "Document not found")
     path = Path(document.file_path).resolve()
     base = (settings.UPLOAD_DIR / f"enterprise_{current_user.enterprise_id}").resolve()
     if not path.is_relative_to(base) or not path.is_file():

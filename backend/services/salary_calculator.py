@@ -326,7 +326,7 @@ def _salary_answer(question, chunks, employee_name=None):
     label = "Monthly take-home pay" if net else "Monthly gross pay before deductions"
     rendered = f"{label}{period_note} is **{_money(amount, currency)}**. {cites}"
     if not formula.startswith("stated"):
-        rendered += f" Calculation: {formula} = {_money(amount, currency)}."
+        rendered += f" Calculation: {formula} = {_money(amount, currency)}. {cites}"
     return {
         "status": "calculated",
         "answer": rendered,

@@ -1,0 +1,4 @@
+# Appointment letter
+Alice Morgan is appointed as an AI Engineer in the Applied AI team.
+Her work location is the Bengaluru office. Her joining date is 7 December 2026.
+The probation period lasts three calendar months from the joining date.

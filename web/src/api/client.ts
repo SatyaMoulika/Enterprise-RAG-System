@@ -33,6 +33,33 @@ function detailMessage(detail: unknown): string | undefined {
   return undefined;
 }
 export class ApiClient {
+  forgotPassword(email: string, signal?: AbortSignal) {
+    return this.request<{ message: string }>('/auth/forgot-password', {
+      method: 'POST',
+      body: { email },
+      signal,
+    });
+  }
+  resetPassword(token: string, password: string, signal?: AbortSignal) {
+    return this.request<{ message: string }>('/auth/reset-password', {
+      method: 'POST',
+      body: { token, password },
+      signal,
+    });
+  }
+  resetPasswordDirect(email: string, password: string, signal?: AbortSignal) {
+    return this.request<{ message: string }>('/auth/reset-password/direct', {
+      method: 'POST',
+      body: { email, password },
+      signal,
+    });
+  }
+  authConfig(signal?: AbortSignal) {
+    return this.request<{
+      registration_enabled: boolean;
+      direct_password_reset_enabled?: boolean;
+    }>('/auth/config', { signal });
+  }
   constructor(
     private token?: string,
     private onUnauthorized?: () => void,
@@ -123,6 +150,15 @@ export class ApiClient {
       options.signal?.removeEventListener('abort', relay);
     }
   }
+  updateProfile(body: { name: string; profile_photo: string | null }) {
+    return this.request<User>('/users/me', { method: 'PATCH', body });
+  }
+  changePassword(body: { current_password: string; password: string }) {
+    return this.request<{ message: string }>('/users/me/password', { method: 'POST', body });
+  }
+  editMember(id: number, body: { name: string; email: string }) {
+    return this.request<Member>(`/users/${id}`, { method: 'PATCH', body });
+  }
   login(email: string, password: string, signal?: AbortSignal) {
     return this.request<TokenResponse>('/auth/login', {
       method: 'POST',
@@ -145,11 +181,15 @@ export class ApiClient {
   upload(file: File, signal?: AbortSignal, access?: DocumentAccess) {
     const body = new FormData();
     body.append('file', file);
+    body.append('background', 'true');
     if (access) body.append('access', JSON.stringify(access));
     return this.request<DocumentRecord>('/documents/upload', { method: 'POST', body, signal });
   }
   removeDocument(id: number, signal?: AbortSignal) {
     return this.request<{ message: string }>(`/documents/${id}`, { method: 'DELETE', signal });
+  }
+  reindexDocument(id: number, signal?: AbortSignal) {
+    return this.request<DocumentRecord>(`/documents/${id}/reindex`, { method: 'POST', signal });
   }
   members(signal?: AbortSignal) {
     return this.request<Member[]>('/users/get_all_users', { signal });

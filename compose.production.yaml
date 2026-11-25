@@ -1,0 +1,45 @@
+# Docker Compose v2.24.4+ is required for !reset.
+name: rag-production
+services:
+  api:
+    ports: !reset []
+    environment:
+      PUBLIC_APP_URL: https://${PUBLIC_DOMAIN:?Set PUBLIC_DOMAIN}
+      LOCAL_DIRECT_PASSWORD_RESET: "false"
+      PUBLIC_REGISTRATION_ENABLED: "false"
+      CORS_ORIGINS: "[]"
+    restart: unless-stopped
+  ingestion_worker:
+    environment:
+      PUBLIC_APP_URL: https://${PUBLIC_DOMAIN:?Set PUBLIC_DOMAIN}
+      LOCAL_DIRECT_PASSWORD_RESET: "false"
+      PUBLIC_REGISTRATION_ENABLED: "false"
+      CORS_ORIGINS: "[]"
+    restart: unless-stopped
+  web:
+    ports: !reset []
+    restart: unless-stopped
+  postgres:
+    restart: unless-stopped
+  ollama:
+    restart: unless-stopped
+  caddy:
+    image: ${CADDY_IMAGE:-caddy:2-alpine}
+    restart: unless-stopped
+    environment:
+      PUBLIC_DOMAIN: ${PUBLIC_DOMAIN:?Set PUBLIC_DOMAIN to your public hostname}
+      ACME_EMAIL: ${ACME_EMAIL:?Set ACME_EMAIL for certificate renewal notices}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_started
+volumes:
+  caddy_data:
+  caddy_config:

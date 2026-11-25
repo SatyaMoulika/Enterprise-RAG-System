@@ -12,6 +12,10 @@ class DocumentResponse(BaseModel):
     created_at: datetime
     visibility: Literal["company", "personal", "restricted"]
     recipient_ids: list[int] = Field(default_factory=list)
+    index_status: str = "ready"
+    index_error: str | None = None
+    extraction_warnings: list[str] = Field(default_factory=list)
+    index_metadata: dict = Field(default_factory=dict)
 
 
 class DeleteDocumentResponse(BaseModel):

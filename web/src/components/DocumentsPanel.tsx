@@ -18,12 +18,14 @@ export function DocumentsPanel({
   onCount,
   onChat,
   membersRevision,
+  onDocumentsChange,
 }: {
   api: ApiClient;
   isAdmin: boolean;
-  onCount: (count: number) => void;
+  onCount?: (count: number) => void;
   onChat?: (document: DocumentRecord) => void;
   membersRevision?: number;
+  onDocumentsChange?: (documents: DocumentRecord[] | null, error?: string) => void;
 }) {
   const [access, setAccess] = useState<DocumentAccess>({
     visibility: 'company',
@@ -38,6 +40,7 @@ export function DocumentsPanel({
   const [preview, setPreview] = useState<DocumentRecord | null>(null);
   const [category, setCategory] = useState('all');
   const [search, setSearch] = useState('');
+  const previouslyFailed = useRef(new Set<number>());
   const [documents, setDocuments] = useState<DocumentRecord[] | null>(null);
   const [limits, setLimits] = useState<DocumentLimits | null>(null);
   const [limitsError, setLimitsError] = useState('');
@@ -46,8 +49,11 @@ export function DocumentsPanel({
   const [notice, setNotice] = useState('');
   const [selected, setSelected] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [showUpload, setShowUpload] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirm, setConfirm] = useState<DocumentRecord | null>(null);
+  const [failedDocumentId, setFailedDocumentId] = useState<number | null>(null);
+  const [retrying, setRetrying] = useState<number | null>(null);
   const [deleteError, setDeleteError] = useState('');
   const [uncertain, setUncertain] = useState(false);
   const pending = useRef(false);
@@ -63,15 +69,19 @@ export function DocumentsPanel({
       const items = await api.documents(controller.signal);
       if (controller.signal.aborted) return;
       setDocuments(items);
-      onCount(items.length);
+      onDocumentsChange?.(items);
+      onCount?.(items.length);
       setError('');
       setUncertain(false);
     } catch (error) {
-      if (!isCancelled(error)) setError(errorMessage(error));
+      if (!isCancelled(error)) {
+        setError('Could not load documents. Try again.');
+        onDocumentsChange?.(null, errorMessage(error));
+      }
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  }, [api, onCount]);
+  }, [api, onCount, onDocumentsChange]);
   const loadLimits = useCallback(
     async (signal: AbortSignal) => {
       try {
@@ -93,9 +103,61 @@ export function DocumentsPanel({
       lifetime.current?.abort();
     };
   }, [load, loadLimits]);
+  useEffect(() => {
+    if (
+      !documents?.some((document) => ['queued', 'indexing'].includes(document.index_status || ''))
+    )
+      return;
+    const timer = window.setInterval(() => {
+      void load();
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [documents, load]);
+  useEffect(() => {
+    const failed = (documents || []).filter((document) => document.index_status === 'failed');
+    const newlyFailed = failed.find((document) => !previouslyFailed.current.has(document.id));
+    previouslyFailed.current = new Set(failed.map((document) => document.id));
+    if (newlyFailed) {
+      setFailedDocumentId(newlyFailed.id);
+      setNotice('');
+      setError(
+        isAdmin
+          ? `Upload failed for “${newlyFailed.title}”. Choose Try again beside the document.`
+          : `“${newlyFailed.title}” could not be prepared. Ask your administrator to try again.`,
+      );
+    }
+  }, [documents, isAdmin]);
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(''), 6000);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+  async function tryDocumentAgain(id: number) {
+    if (pending.current) return;
+    pending.current = true;
+    setRetrying(id);
+    setError('');
+    setNotice('');
+    try {
+      await api.reindexDocument(id, lifetime.current?.signal);
+      previouslyFailed.current.delete(id);
+      setFailedDocumentId(null);
+      setNotice('Trying again. Your document will be available shortly.');
+      await load();
+    } catch (error) {
+      if (!isCancelled(error)) {
+        setFailedDocumentId(id);
+        setError('Upload failed. Please try again.');
+      }
+    } finally {
+      pending.current = false;
+      setRetrying(null);
+    }
+  }
   async function upload(event: FormEvent) {
     event.preventDefault();
     if (pending.current || !limits) return;
+    setFailedDocumentId(null);
     if (access.visibility !== 'company' && !access.recipient_ids.length) {
       setError('Select at least one employee before uploading.');
       return;
@@ -121,11 +183,23 @@ export function DocumentsPanel({
       const result = await api.upload(selected, lifetime.current?.signal, access);
       setSelected(null);
       if (input.current) input.current.value = '';
-      setNotice(`“${result.title}” is indexed and ready for questions.`);
+      setNotice(
+        result.index_status === 'failed'
+          ? `“${result.title}” could not be prepared. Try again below.`
+          : result.index_status === 'indexing'
+            ? `“${result.title}” is being prepared.`
+            : result.index_status === 'queued'
+              ? `“${result.title}” is being uploaded.`
+              : `“${result.title}” is ready for questions.`,
+      );
       await load();
     } catch (error) {
       if (!isCancelled(error)) {
-        setError(errorMessage(error));
+        setError(
+          error instanceof ApiError && error.uncertain
+            ? errorMessage(error)
+            : 'Upload failed. Please try again.',
+        );
         setUncertain(error instanceof ApiError && error.uncertain);
       }
     } finally {
@@ -168,71 +242,126 @@ export function DocumentsPanel({
               : 'Your personal letters and the company knowledge shared with you, in one place.'}
           </p>
         </div>
-        <Button
-          variant="secondary"
-          disabled={loading || uploading || deleting}
-          onClick={() => {
-            void load();
-            if (lifetime.current) void loadLimits(lifetime.current.signal);
-          }}
-        >
-          {loading ? 'Refreshing…' : 'Refresh documents'}
-        </Button>
+        <div className="flex flex-wrap gap-3">
+          {isAdmin && (
+            <Button
+              aria-expanded={showUpload}
+              aria-controls="document-upload-panel"
+              disabled={uploading || deleting}
+              onClick={() => setShowUpload((value) => !value)}
+            >
+              {showUpload ? 'Close upload' : 'Upload documents ↗'}
+            </Button>
+          )}
+          <Button
+            variant="secondary"
+            disabled={loading || uploading || deleting}
+            onClick={() => {
+              void load();
+              if (lifetime.current) void loadLimits(lifetime.current.signal);
+            }}
+          >
+            {loading ? 'Refreshing…' : 'Refresh documents'}
+          </Button>
+        </div>
       </div>
       {isAdmin && (
-        <Card className="mb-6 bg-soft/35 p-5">
-          <form onSubmit={upload} aria-label="Upload document">
-            <label className="block text-sm font-bold" htmlFor="upload-file">
-              Add a document
-            </label>
-            <p className="mb-4 mt-2 text-xs leading-6 text-muted">
-              {limits
-                ? `Text-based PDFs and UTF-8 text files, up to ${sizeLabel(limits.max_upload_bytes)}. Scanned PDFs need OCR first.`
-                : 'Loading supported upload limits…'}
-            </p>
-            {limitsError && (
-              <div className="mb-4">
-                <Feedback error>{limitsError} Use Refresh documents to try again.</Feedback>
-              </div>
-            )}
-            <DocumentAccessFields
-              membersRevision={membersRevision}
-              api={api}
-              value={access}
-              onChange={setAccess}
-              disabled={uploading || uncertain}
-            />
-            <div className="flex flex-wrap items-center gap-4">
-              <input
-                ref={input}
-                id="upload-file"
-                type="file"
-                accept={limits?.allowed_extensions.join(',') || '.pdf,.txt'}
-                disabled={!limits || uploading || deleting || uncertain}
-                onChange={(event) => {
-                  setSelected(event.target.files?.[0] || null);
-                  setError('');
-                }}
-                className="min-w-0 flex-1 rounded-lg border border-line bg-surface p-3 text-xs file:mr-3 file:rounded file:border-0 file:bg-soft file:px-3 file:py-2 file:text-azure"
-              />
-              <Button type="submit" loading={uploading} disabled={!limits || deleting || uncertain}>
-                {uploading ? 'Indexing document…' : 'Upload and index ↗'}
-              </Button>
-            </div>
-            {uploading && (
-              <p role="status" className="mt-3 text-xs text-muted">
-                Extracting and indexing your document. This may take a moment.
+        <div id="document-upload-panel" hidden={!showUpload}>
+          <Card className="mb-6 bg-soft/35 p-5">
+            <form onSubmit={upload} aria-label="Upload document">
+              <label className="block text-sm font-bold" htmlFor="upload-file">
+                Add a document
+              </label>
+              <p className="mb-4 mt-2 text-xs leading-6 text-muted">
+                {limits
+                  ? `Text-based PDFs and UTF-8 text files, up to ${sizeLabel(limits.max_upload_bytes)}. Scanned PDFs need OCR first.`
+                  : 'Loading supported upload limits…'}
               </p>
-            )}
-          </form>
-        </Card>
+              {limitsError && (
+                <div className="mb-4">
+                  <Feedback error>{limitsError} Use Refresh documents to try again.</Feedback>
+                </div>
+              )}
+              <DocumentAccessFields
+                membersRevision={membersRevision}
+                api={api}
+                value={access}
+                onChange={setAccess}
+                disabled={uploading || uncertain}
+              />
+              <div className="flex flex-wrap items-center gap-4">
+                <input
+                  ref={input}
+                  id="upload-file"
+                  type="file"
+                  accept={limits?.allowed_extensions.join(',') || '.pdf,.txt'}
+                  disabled={!limits || uploading || deleting || uncertain}
+                  onChange={(event) => {
+                    setSelected(event.target.files?.[0] || null);
+                    setError('');
+                  }}
+                  className="min-w-0 flex-1 rounded-lg border border-line bg-surface p-3 text-xs file:mr-3 file:rounded file:border-0 file:bg-soft file:px-3 file:py-2 file:text-azure"
+                />
+                <Button
+                  type="submit"
+                  loading={uploading}
+                  disabled={!limits || deleting || uncertain}
+                >
+                  {uploading ? 'Uploading document…' : 'Upload document ↗'}
+                </Button>
+              </div>
+              {uploading && (
+                <p role="status" className="mt-3 text-xs text-muted">
+                  Uploading your document. Indexing will continue in the background.
+                </p>
+              )}
+            </form>
+          </Card>
+        </div>
       )}
       <div className="mb-5 space-y-3">
-        {error && <Feedback error>{error}</Feedback>}
+        {(error || notice) && (
+          <div
+            className="fixed bottom-5 right-5 z-40 w-[min(380px,calc(100vw-40px))] rounded-xl border border-line bg-surface p-3 shadow-lg"
+            aria-label="Document notification"
+          >
+            <Feedback error={!!error}>{error || notice}</Feedback>
+            <div className="mt-2 flex gap-2">
+              {error && selected && !uncertain && (
+                <Button variant="ghost" disabled={uploading} onClick={upload}>
+                  Try again
+                </Button>
+              )}
+              {error && isAdmin && !selected && failedDocumentId !== null && !uncertain && (
+                <Button
+                  variant="ghost"
+                  aria-label="Try upload again"
+                  disabled={retrying !== null}
+                  onClick={() => void tryDocumentAgain(failedDocumentId)}
+                >
+                  Try again
+                </Button>
+              )}
+              {error && uncertain && (
+                <Button variant="ghost" onClick={() => void load()}>
+                  Check upload status
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setError('');
+                  setNotice('');
+                }}
+              >
+                Dismiss
+              </Button>
+            </div>
+          </div>
+        )}
         {uncertain && (
           <Feedback>Refresh the document list before repeating an upload or deletion.</Feedback>
         )}
-        {notice && <Feedback>{notice}</Feedback>}
       </div>
       {documents && (
         <div className="mb-6 space-y-4">
@@ -318,7 +447,7 @@ export function DocumentsPanel({
                 setNotice('Document access updated.');
                 await load();
               } catch (err) {
-                if (!isCancelled(err)) setError(errorMessage(err));
+                if (!isCancelled(err)) setError('Could not complete this request. Try again.');
               } finally {
                 setSavingAccess(false);
               }
@@ -355,79 +484,122 @@ export function DocumentsPanel({
             <h2 className="text-lg font-bold">No documents yet.</h2>
             <p className="mt-2 text-xs leading-6 text-muted">
               {isAdmin
-                ? 'Add your first document above. Once indexing succeeds, you can ask questions about it.'
+                ? 'Add your first document above. Once the upload finishes, you can ask questions about it.'
                 : 'Your administrator can add documents for this workspace.'}
             </p>
           </div>
           <AIMotion kind="network" className="hidden h-32 sm:block" />
         </Card>
       ) : (
-        <ul aria-label="Workspace documents" className="space-y-3">
-          {documents
-            .filter(
-              (d) =>
-                (category === 'all' || (d.visibility || 'company') === category) &&
-                d.title.toLowerCase().includes(search.toLowerCase()),
-            )
-            .map((document) => (
-              <li key={document.id}>
-                <Card className="flex flex-wrap items-center justify-between gap-4 p-4 sm:p-5">
-                  <div className="min-w-0 flex-1">
-                    <div className="mb-2 flex items-center gap-2">
-                      <span aria-hidden="true" className="text-azure">
-                        ▤
-                      </span>
-                      <h2 className="break-words text-sm font-bold">{document.title}</h2>
+        <div>
+          <ul aria-label="Workspace documents" className="space-y-3">
+            {documents
+              .filter(
+                (d) =>
+                  (category === 'all' || (d.visibility || 'company') === category) &&
+                  d.title.toLowerCase().includes(search.toLowerCase()),
+              )
+              .map((document) => (
+                <li key={document.id}>
+                  <Card className="flex flex-wrap items-center justify-between gap-4 p-4 sm:p-5">
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-2 flex items-center gap-2">
+                        <span aria-hidden="true" className="text-azure">
+                          ▤
+                        </span>
+                        <h2 className="break-words text-sm font-bold">{document.title}</h2>
+                      </div>
+                      <p className="text-[11px] text-muted">
+                        Added {new Date(document.created_at).toLocaleDateString()}
+                      </p>
+                      {document.index_status && document.index_status !== 'ready' && (
+                        <p role="status" className="mt-2 text-xs text-muted">
+                          {document.index_status === 'queued'
+                            ? 'Uploading document…'
+                            : document.index_status === 'indexing'
+                              ? 'Preparing document…'
+                              : 'Upload failed. Try again.'}
+                        </p>
+                      )}
+                      {!!document.extraction_warnings?.length && (
+                        <details className="mt-2 text-xs text-muted">
+                          <summary>Source extraction notes</summary>
+                          <ul>
+                            {document.extraction_warnings.map((warning) => (
+                              <li key={warning}>{warning}</li>
+                            ))}
+                          </ul>
+                        </details>
+                      )}
                     </div>
-                    <p className="text-[11px] text-muted">
-                      Added {new Date(document.created_at).toLocaleDateString()} · Document #
-                      {document.id}
-                    </p>
-                  </div>
-                  <Badge>
-                    {document.visibility === 'personal'
-                      ? 'Personal'
-                      : document.visibility === 'restricted'
-                        ? 'Restricted'
-                        : 'Company'}
-                  </Badge>
-                  <Button variant="secondary" onClick={() => setPreview(document)}>
-                    View
-                  </Button>
-                  <Button variant="secondary" onClick={() => onChat?.(document)}>
-                    Ask about this
-                  </Button>
-                  {isAdmin && (
-                    <Button
-                      variant="ghost"
-                      onClick={() => {
-                        setEditing(document);
-                        setEditAccess({
-                          visibility: document.visibility || 'company',
-                          recipient_ids: document.recipient_ids || [],
-                        });
-                      }}
-                    >
-                      Manage access
-                    </Button>
-                  )}
-                  {isAdmin && (
-                    <Button
-                      variant="ghost"
-                      disabled={uploading || deleting || uncertain}
-                      aria-label={`Delete ${document.title}`}
-                      onClick={() => {
-                        setConfirm(document);
-                        setDeleteError('');
-                      }}
-                    >
-                      Delete
-                    </Button>
-                  )}
-                </Card>
-              </li>
-            ))}
-        </ul>
+                    <Badge>
+                      {document.visibility === 'personal'
+                        ? 'Personal'
+                        : document.visibility === 'restricted'
+                          ? 'Restricted'
+                          : 'Company'}
+                    </Badge>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Button variant="secondary" onClick={() => setPreview(document)}>
+                        View
+                      </Button>
+                      <Button variant="secondary" onClick={() => onChat?.(document)}>
+                        Ask about this
+                      </Button>
+                      {isAdmin && document.index_status === 'failed' && (
+                        <Button
+                          variant="ghost"
+                          disabled={retrying !== null || uploading || deleting || uncertain}
+                          onClick={() => void tryDocumentAgain(document.id)}
+                        >
+                          {retrying === document.id ? 'Trying again…' : 'Try again'}
+                        </Button>
+                      )}
+                      {isAdmin && (
+                        <Button
+                          variant="ghost"
+                          onClick={() => {
+                            setEditing(document);
+                            setEditAccess({
+                              visibility: document.visibility || 'company',
+                              recipient_ids: document.recipient_ids || [],
+                            });
+                          }}
+                        >
+                          Manage access
+                        </Button>
+                      )}
+                      {isAdmin && (
+                        <Button
+                          variant="ghost"
+                          disabled={uploading || deleting || uncertain}
+                          aria-label={`Delete ${document.title}`}
+                          title={`Delete ${document.title}`}
+                          onClick={() => {
+                            setConfirm(document);
+                            setDeleteError('');
+                          }}
+                        >
+                          <svg
+                            aria-hidden="true"
+                            className="text-[#883C3C]"
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.7"
+                          >
+                            <path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7" />
+                          </svg>
+                        </Button>
+                      )}
+                    </div>
+                  </Card>
+                </li>
+              ))}
+          </ul>
+        </div>
       )}
       {confirm && (
         <ConfirmationDialog
@@ -446,7 +618,7 @@ export function DocumentsPanel({
           }}
           onConfirm={() => void remove()}
         >
-          “{confirm.title}” and its indexed excerpts will be removed from future answers.
+          “{confirm.title}” and its source passages will be removed from future answers.
         </ConfirmationDialog>
       )}
     </section>

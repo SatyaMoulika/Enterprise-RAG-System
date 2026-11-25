@@ -145,3 +145,31 @@ dialog::backdrop {
   margin: 1.25rem 0;
   border-color: var(--pa-line);
 }
+
+.citation-reference {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-inline: 0.15rem;
+  padding: 0 0.35rem;
+  border: 1px solid var(--pa-line);
+  border-radius: 0.35rem;
+  background: var(--pa-soft);
+  color: var(--pa-azure);
+  font-size: 0.75em;
+  font-weight: 700;
+  line-height: 1.7;
+  vertical-align: 0.08em;
+  cursor: pointer;
+}
+.citation-reference:hover {
+  border-color: var(--pa-azure);
+}
+.source-passage {
+  overflow-wrap: anywhere;
+}
+
+.password-input::-ms-reveal,
+.password-input::-ms-clear {
+  display: none;
+}

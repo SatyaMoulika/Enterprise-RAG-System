@@ -14,6 +14,12 @@ class DocumentChunk(Base):
 
     chunk_text = Column(Text, nullable=False)
     chunk_index = Column(Integer)
+    page_start = Column(Integer, nullable=True)
+    page_end = Column(Integer, nullable=True)
+    section = Column(Text, nullable=True)
+    start_offset = Column(Integer, nullable=True)
+    end_offset = Column(Integer, nullable=True)
+    section_key = Column(Text, nullable=True)
 
     embedding = Column(JSON, nullable=True)
     embedding_model = Column(Text, nullable=True)

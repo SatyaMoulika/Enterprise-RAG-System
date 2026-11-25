@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@portfolio/porcelain-azure';
 import { ApiClient, errorMessage, isCancelled } from '../api/client';
 import type { DocumentRecord } from '../api/types';
@@ -7,12 +7,19 @@ export function DocumentViewer({
   api,
   document,
   onClose,
+  page,
 }: {
   api: ApiClient;
   document: Pick<DocumentRecord, 'id' | 'title'>;
   onClose: () => void;
+  page?: number | null;
 }) {
   const [url, setUrl] = useState('');
+  const preview = useRef<HTMLElement>(null);
+  useEffect(() => {
+    preview.current?.scrollIntoView?.({ block: 'start', behavior: 'instant' });
+    preview.current?.focus();
+  }, [document.id, page]);
   const [text, setText] = useState<string | null>(null);
   const [error, setError] = useState('');
   useEffect(() => {
@@ -39,6 +46,8 @@ export function DocumentViewer({
   }, [api, document.id, document.title]);
   return (
     <section
+      ref={preview}
+      tabIndex={-1}
       aria-label={`Preview ${document.title}`}
       className="my-5 rounded-xl border border-line bg-soft/30 p-5"
     >
@@ -63,7 +72,7 @@ export function DocumentViewer({
             </pre>
           ) : document.title.toLowerCase().endsWith('.pdf') ? (
             <iframe
-              src={url}
+              src={page && page > 0 ? `${url}#page=${page}` : url}
               title={document.title}
               className="mt-4 h-[60vh] w-full rounded-lg border border-line"
             />

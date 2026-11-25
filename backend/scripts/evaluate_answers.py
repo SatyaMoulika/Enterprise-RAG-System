@@ -31,6 +31,11 @@ def main():
     )
     parser.add_argument("--allow-inference", action="store_true")
     parser.add_argument(
+        "--require-reviewed",
+        action="store_true",
+        help="Fail review aggregation if answers/claims are unreviewed or any pipeline run failed",
+    )
+    parser.add_argument(
         "--allow-model-download",
         action="store_true",
         help="Required when profiles includes reranked; allows loading the optional cross-encoder",
@@ -71,7 +76,9 @@ def main():
     args = parser.parse_args()
     if args.review_file:
         try:
-            report = summarize_reviews(json.loads(args.review_file.read_text()))
+            report = summarize_reviews(
+                json.loads(args.review_file.read_text()), require_complete=args.require_reviewed
+            )
         except (ValueError, TypeError, KeyError, OSError) as exc:
             parser.error(f"Invalid review file: {type(exc).__name__}")
         print(json.dumps(report, indent=2))

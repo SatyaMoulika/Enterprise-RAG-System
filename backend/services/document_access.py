@@ -21,6 +21,26 @@ def accessible_documents(user=None):
     )
 
 
+def require_document_read_access(db, document_id, enterprise_id, user=None):
+    """Validate explicit file selection without revealing another user's documents."""
+    unavailable = HTTPException(
+        404,
+        "Document not found or access is unavailable. Choose an available file in My documents.",
+    )
+    if user is not None and (not user.is_active or user.enterprise_id != enterprise_id):
+        raise unavailable
+    document = db.scalar(
+        select(Document).where(
+            Document.id == document_id,
+            Document.enterprise_id == enterprise_id,
+            accessible_documents(user),
+        )
+    )
+    if document is None:
+        raise unavailable
+    return document
+
+
 def validate_access(db, enterprise_id, access):
     ids = set(access.recipient_ids)
     users = (

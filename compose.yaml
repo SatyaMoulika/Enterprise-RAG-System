@@ -18,13 +18,22 @@ services:
       - rag_models:/root/.ollama
     # Internal only. Use 'docker compose exec ollama ollama pull ...' to load models.
   api:
-    build:
+    build: &rag_backend_build
       context: ./backend
       args:
         RAG_INSTALL_RERANKING: ${RAG_INSTALL_RERANKING:-false}
-    environment:
+    environment: &rag_environment
       DATABASE_URL: postgresql+psycopg://rag:${RAG_DB_PASSWORD:?Set RAG_DB_PASSWORD}@postgres:5432/rag
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Set JWT_SECRET_KEY in .env}
+      PUBLIC_APP_URL: ${PUBLIC_APP_URL:-http://localhost:8080}
+      LOCAL_DIRECT_PASSWORD_RESET: ${LOCAL_DIRECT_PASSWORD_RESET:-true}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_SECURITY: ${SMTP_SECURITY:-starttls}
+      PUBLIC_REGISTRATION_ENABLED: ${PUBLIC_REGISTRATION_ENABLED:-true}
       OLLAMA_BASE_URL: http://ollama:11434
       NO_PROXY: "${NO_PROXY:-127.0.0.1,localhost},postgres,ollama"
       no_proxy: "${no_proxy:-127.0.0.1,localhost},postgres,ollama"
@@ -39,17 +48,43 @@ services:
       RETRIEVAL_TOP_K: ${RETRIEVAL_TOP_K:-5}
       RETRIEVAL_CANDIDATES: ${RETRIEVAL_CANDIDATES:-20}
       RETRIEVAL_CONTEXT_CHARACTERS: ${RETRIEVAL_CONTEXT_CHARACTERS:-24000}
+      RETRIEVAL_MIN_SIMILARITY: ${RETRIEVAL_MIN_SIMILARITY:-0.3}
+      RETRIEVAL_NEIGHBORS: ${RETRIEVAL_NEIGHBORS:-1}
+      RETRIEVAL_MAX_DOCUMENT_CHUNKS: ${RETRIEVAL_MAX_DOCUMENT_CHUNKS:-3}
+      EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE:-32}
+      EMBEDDING_REVISION: ${EMBEDDING_REVISION:-}
+      GENERATION_CONTEXT_TOKENS: ${GENERATION_CONTEXT_TOKENS:-16384}
+      GENERATION_MAX_TOKENS: ${GENERATION_MAX_TOKENS:-1024}
+      GENERATION_TEMPERATURE: ${GENERATION_TEMPERATURE:-0.0}
+      INGESTION_MEMORY_MB: ${INGESTION_MEMORY_MB:-4096}
+      INGESTION_TIMEOUT_SECONDS: ${INGESTION_TIMEOUT_SECONDS:-900}
       CORS_ORIGINS: '["http://localhost:5173"]'
     ports:
-      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:8001:8000"
     volumes:
       - rag_uploads:/app/uploads
       - rag_reranker_cache:/app/model-cache
+    healthcheck:
+      test: ["CMD", ".venv/bin/python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     depends_on:
       postgres:
         condition: service_healthy
       ollama:
         condition: service_started
+  ingestion_worker:
+    build: *rag_backend_build
+    environment: *rag_environment
+    command: [".venv/bin/python", "scripts/ingestion_worker.py", "--recover-stale-minutes", "30"]
+    restart: unless-stopped
+    volumes:
+      - rag_uploads:/app/uploads
+      - rag_reranker_cache:/app/model-cache
+    depends_on:
+      api:
+        condition: service_healthy
   web:
     build: ./web
     ports:

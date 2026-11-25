@@ -11,3 +11,5 @@ vectorstore/
 *.db
 node_modules/
 dist/
+
+/backups/

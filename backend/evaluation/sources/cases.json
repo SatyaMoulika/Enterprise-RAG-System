@@ -1,0 +1,17 @@
+{
+  "description": "Source-document development regressions. Runs actual ingestion, persistence, access filtering, retrieval and generation in an isolated database; not an unseen production benchmark.",
+  "documents": [
+    {"key": "leave", "path": "leave-policy.txt"},
+    {"key": "security", "path": "security-policy.txt"},
+    {"key": "offer", "path": "offer-letter.pdf", "visibility": "personal", "recipient": "Alice Morgan"},
+    {"key": "table", "path": "allowances.pdf"}
+  ],
+  "queries": [
+    {"id": "remote-exception", "question": "Can every employee work remotely two days each week?", "relevant_documents": ["leave"], "reference_answer": "Up to two days with manager approval, except onsite roles; contractors follow their contracts."},
+    {"id": "retention-comparison", "question": "How long are logs and encrypted database backups retained?", "relevant_documents": ["security"], "reference_answer": "Logs: 30 days. Encrypted backups: 90 days."},
+    {"id": "personal-salary", "question": "What is my monthly gross pay?", "employee": "Alice Morgan", "relevant_documents": ["offer"], "reference_answer": "INR 100,000 monthly gross before deductions."},
+    {"id": "private-salary", "question": "What is Alice Morgan monthly gross pay?", "employee": "Bob Reed", "relevant_documents": [], "reference_answer": "Cannot establish Alice Morgan pay from documents available to Bob."},
+    {"id": "table-allowance", "question": "What is the equipment allowance?", "relevant_documents": ["table"], "reference_answer": "INR 5,000 equipment allowance."},
+    {"id": "unsupported", "question": "What is the CEO private telephone number?", "relevant_documents": [], "reference_answer": "The available documents do not provide this information."}
+  ]
+}

@@ -4,16 +4,22 @@ import { ApiClient, ApiError, errorMessage, isCancelled } from '../api/client';
 import type { Member, User } from '../api/types';
 import { Feedback } from './Feedback';
 import { ConfirmationDialog } from './ConfirmationDialog';
+import { PasswordField } from './PasswordField';
 
 export function MembersPanel({
   api,
   currentUser,
   onMembersChanged,
+  onCurrentUserUpdated,
 }: {
   api: ApiClient;
   currentUser: User;
   onMembersChanged?: () => void;
+  onCurrentUserUpdated?: (user: User) => void;
 }) {
+  const [editing, setEditing] = useState<Member | null>(null);
+  const [editError, setEditError] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
   const [members, setMembers] = useState<Member[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -126,7 +132,7 @@ export function MembersPanel({
             Your workspace team.
           </h1>
           <p className="mt-2 text-xs text-muted">
-            Manage sign-in accounts in Workspace #{currentUser.enterprise_id}.
+            Manage sign-in accounts in {currentUser.enterprise_name?.trim() || 'your organisation'}.
           </p>
         </div>
         <Button
@@ -137,60 +143,7 @@ export function MembersPanel({
           {loading ? 'Refreshing…' : 'Refresh members'}
         </Button>
       </div>
-      <Card className="mb-6 bg-soft/35 p-5">
-        <h2 className="text-lg font-bold">Add a member</h2>
-        <p className="mb-5 mt-2 text-xs leading-6 text-muted">
-          Creates an account immediately. Members can read documents and ask questions;
-          administrators also manage documents and accounts. Share the initial password securely.
-        </p>
-        <form ref={form} onSubmit={add} aria-label="Add member" className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <InputField
-              label="Member name"
-              name="name"
-              maxLength={120}
-              placeholder="Full name (optional)"
-              autoComplete="off"
-              disabled={busy || removing || uncertain}
-            />
-            <InputField
-              label="Member email"
-              name="email"
-              type="email"
-              required
-              autoComplete="off"
-              disabled={busy || removing || uncertain}
-            />
-            <InputField
-              label="Initial password"
-              name="password"
-              type="password"
-              required
-              minLength={8}
-              maxLength={128}
-              autoComplete="new-password"
-              hint="8–128 characters. This field clears after every submission."
-              disabled={busy || removing || uncertain}
-            />
-          </div>
-          <div className="flex flex-wrap items-end gap-4">
-            <div className="min-w-48 flex-1">
-              <SelectField
-                label="Account role"
-                name="role"
-                defaultValue="employee"
-                disabled={busy || removing || uncertain}
-              >
-                <option value="employee">Member</option>
-                <option value="admin">Administrator</option>
-              </SelectField>
-            </div>
-            <Button type="submit" loading={busy} disabled={removing || uncertain}>
-              {busy ? 'Creating account…' : 'Add member ↗'}
-            </Button>
-          </div>
-        </form>
-      </Card>
+
       <div className="mb-5 space-y-3">
         {error && <Feedback error>{error}</Feedback>}
         {uncertain && (
@@ -200,76 +153,239 @@ export function MembersPanel({
         )}
         {notice && <Feedback>{notice}</Feedback>}
       </div>
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-bold">Workspace accounts</h2>
-          <p className="mt-1 text-[11px] text-muted">
-            {members === null
-              ? 'Account list not loaded'
-              : `${members.length} account${members.length === 1 ? '' : 's'}`}{' '}
-            · Your own account cannot be removed here.
-          </p>
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0">
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-bold">Workspace accounts</h2>
+              <p className="mt-1 text-[11px] text-muted">
+                {members === null
+                  ? 'Account list not loaded'
+                  : `${members.length} account${members.length === 1 ? '' : 's'}`}{' '}
+                · Your own account cannot be removed here.
+              </p>
+            </div>
+            <div className="w-full sm:w-64">
+              <InputField
+                label="Find a member"
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search by email"
+              />
+            </div>
+          </div>
+          {members === null ? (
+            <p role="status" className="py-8 text-sm text-muted">
+              {loading
+                ? 'Loading workspace members…'
+                : 'Member list is unavailable. Use Refresh members to try again.'}
+            </p>
+          ) : filtered?.length === 0 ? (
+            <Card className="p-6">
+              <p className="text-sm text-muted">
+                {search ? 'No members match this email.' : 'No accounts are available.'}
+              </p>
+            </Card>
+          ) : (
+            <ul aria-label="Workspace members" className="space-y-3">
+              {filtered?.map((member) => (
+                <li key={member.id}>
+                  <Card className="flex flex-wrap items-center justify-between gap-4 p-4 sm:p-5">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="break-all text-sm font-bold">
+                          {member.name || member.email}
+                        </h3>
+                        {member.name && <span className="text-xs text-muted">{member.email}</span>}
+                        {member.id === currentUser.id && <Badge>You</Badge>}
+                      </div>
+                      <p className="mt-2 text-[11px] text-muted">
+                        Added {new Date(member.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      disabled={busy || removing || savingEdit}
+                      onClick={() => {
+                        setEditError('');
+                        setEditing(member);
+                      }}
+                    >
+                      Edit details
+                    </Button>
+                    <Badge>{member.role === 'admin' ? 'Administrator' : 'Member'}</Badge>
+                    <Badge tone={member.is_active ? 'teal' : 'violet'}>
+                      {member.is_active ? 'Active' : 'Inactive'}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      aria-label={`Remove ${member.email}`}
+                      title={
+                        member.id === currentUser.id
+                          ? 'You cannot remove your own account'
+                          : undefined
+                      }
+                      disabled={member.id === currentUser.id || busy || removing || uncertain}
+                      onClick={() => {
+                        setSelected(member);
+                        setRemoveError('');
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  </Card>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
-        <div className="w-full sm:w-64">
-          <InputField
-            label="Find a member"
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search by email"
-          />
-        </div>
-      </div>
-      {members === null ? (
-        <p role="status" className="py-8 text-sm text-muted">
-          {loading
-            ? 'Loading workspace members…'
-            : 'Member list is unavailable. Use Refresh members to try again.'}
-        </p>
-      ) : filtered?.length === 0 ? (
-        <Card className="p-6">
-          <p className="text-sm text-muted">
-            {search ? 'No members match this email.' : 'No accounts are available.'}
-          </p>
-        </Card>
-      ) : (
-        <ul aria-label="Workspace members" className="space-y-3">
-          {filtered?.map((member) => (
-            <li key={member.id}>
-              <Card className="flex flex-wrap items-center justify-between gap-4 p-4 sm:p-5">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="break-all text-sm font-bold">{member.name || member.email}</h3>
-                    {member.name && <span className="text-xs text-muted">{member.email}</span>}
-                    {member.id === currentUser.id && <Badge>You</Badge>}
-                  </div>
-                  <p className="mt-2 text-[11px] text-muted">
-                    Added {new Date(member.created_at).toLocaleDateString()} · Account #{member.id}
-                  </p>
-                </div>
-                <Badge>{member.role === 'admin' ? 'Administrator' : 'Member'}</Badge>
-                <Badge tone={member.is_active ? 'teal' : 'violet'}>
-                  {member.is_active ? 'Active' : 'Inactive'}
-                </Badge>
+        <aside aria-label="Member setup and access" className="min-w-0">
+          {editing && (
+            <Card
+              key={editing.id}
+              className="mb-6 p-5"
+              role="region"
+              aria-label="Edit member details"
+            >
+              <h2 className="text-lg font-bold">Edit member details</h2>
+              <form
+                className="mt-4 space-y-4"
+                onSubmit={async (event) => {
+                  event.preventDefault();
+                  if (savingEdit) return;
+                  const values = new FormData(event.currentTarget);
+                  setSavingEdit(true);
+                  setEditError('');
+                  try {
+                    const updated = await api.editMember(editing.id, {
+                      name: String(values.get('name')).trim(),
+                      email: String(values.get('email')).trim(),
+                    });
+                    if (updated.id === currentUser.id) onCurrentUserUpdated?.(updated);
+                    setEditing(null);
+                    await load();
+                    onMembersChanged?.();
+                  } catch (error) {
+                    setEditError(errorMessage(error));
+                  } finally {
+                    setSavingEdit(false);
+                  }
+                }}
+              >
+                <InputField
+                  autoFocus
+                  label="Full name"
+                  name="name"
+                  required
+                  maxLength={120}
+                  defaultValue={editing.name || ''}
+                  disabled={savingEdit}
+                />
+                <InputField
+                  label="Email address"
+                  name="email"
+                  type="email"
+                  required
+                  defaultValue={editing.email}
+                  disabled={savingEdit}
+                />
+                {editError && <Feedback error>{editError}</Feedback>}
+                <p className="text-xs text-muted">
+                  Changing an email address signs that member out. They can sign in again using the
+                  new address.
+                </p>
+                <Button type="submit" loading={savingEdit}>
+                  Save details
+                </Button>
                 <Button
                   variant="ghost"
-                  aria-label={`Remove ${member.email}`}
-                  title={
-                    member.id === currentUser.id ? 'You cannot remove your own account' : undefined
-                  }
-                  disabled={member.id === currentUser.id || busy || removing || uncertain}
+                  disabled={savingEdit}
                   onClick={() => {
-                    setSelected(member);
-                    setRemoveError('');
+                    setEditing(null);
+                    setEditError('');
                   }}
                 >
-                  Remove
+                  Cancel
                 </Button>
-              </Card>
-            </li>
-          ))}
-        </ul>
-      )}
+              </form>
+            </Card>
+          )}
+
+          <div hidden={!!editing}>
+            <Card className="mb-6 bg-soft/35 p-5">
+              <h2 className="text-lg font-bold">Add a member</h2>
+              <p className="mb-5 mt-2 text-xs leading-6 text-muted">
+                Creates an account immediately. Members can read documents and ask questions;
+                administrators also manage documents and accounts. Share the initial password
+                securely.
+              </p>
+              <form ref={form} onSubmit={add} aria-label="Add member" className="space-y-4">
+                <div className="grid gap-4">
+                  <InputField
+                    label="Member name"
+                    name="name"
+                    maxLength={120}
+                    placeholder="Full name (optional)"
+                    autoComplete="off"
+                    disabled={busy || removing || uncertain}
+                  />
+                  <InputField
+                    label="Member email"
+                    name="email"
+                    type="email"
+                    required
+                    autoComplete="off"
+                    disabled={busy || removing || uncertain}
+                  />
+                  <PasswordField
+                    label="Initial password"
+                    name="password"
+                    required
+                    minLength={8}
+                    maxLength={128}
+                    autoComplete="new-password"
+                    hint="8–128 characters. This field clears after every submission."
+                    disabled={busy || removing || uncertain}
+                  />
+                </div>
+                <div className="flex flex-wrap items-end gap-4">
+                  <div className="min-w-48 flex-1">
+                    <SelectField
+                      label="Account role"
+                      name="role"
+                      defaultValue="employee"
+                      disabled={busy || removing || uncertain}
+                    >
+                      <option value="employee">Member</option>
+                      <option value="admin">Administrator</option>
+                    </SelectField>
+                  </div>
+                  <Button type="submit" loading={busy} disabled={removing || uncertain}>
+                    {busy ? 'Creating account…' : 'Add member ↗'}
+                  </Button>
+                </div>
+              </form>
+            </Card>
+          </div>
+          <Card className="p-5">
+            <Eyebrow>Access levels</Eyebrow>
+            <h2 className="mt-2 text-lg font-bold">Who can see each document?</h2>
+            <div className="mt-4 space-y-4">
+              {[
+                ['Company-wide', 'Every member of this workspace'],
+                ['Personal', 'The assigned employee and administrators'],
+                ['Restricted', 'Selected members and administrators'],
+              ].map(([label, description]) => (
+                <div key={label} className="space-y-2">
+                  <Badge>{label}</Badge>
+                  <p className="text-xs leading-6 text-muted">{description}</p>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </aside>
+      </div>
       {selected && (
         <ConfirmationDialog
           title="Remove this member?"

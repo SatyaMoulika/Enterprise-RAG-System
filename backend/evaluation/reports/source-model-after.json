@@ -1,0 +1,392 @@
+{
+  "dataset_description": "Source-document development regressions. Runs actual ingestion, persistence, access filtering, retrieval and generation in an isolated database; not an unseen production benchmark.",
+  "dataset_sha256": "9d714f350a611f2582b1cd1d61eb0403c8013ad7953a2b83c0824412c480b637",
+  "prompt_version": "grounded-assistant-v7",
+  "ingestion": [
+    {
+      "key": "leave",
+      "document_id": 1,
+      "sha256": "98b71af9185e87c0e49a9c3387e2188783ff81fd795bd36d0f4d8b416ba89c13",
+      "seconds": 0.09814898599870503,
+      "index_metadata": {
+        "chunker": "source-paragraphs-v3",
+        "extractor": "pdf-prose-v2",
+        "chunk_size": 500,
+        "chunk_max_characters": 4000,
+        "overlap": 50,
+        "embedding_model": "ollama:all-minilm",
+        "embedding_dimension": 384,
+        "embedding_revision_pinned": false,
+        "page_count": 1,
+        "chunk_count": 2
+      },
+      "warnings": []
+    },
+    {
+      "key": "security",
+      "document_id": 2,
+      "sha256": "9b5e9b5514e4bd9d00d72b341b1ab3695c2657cbbdd287576029c354d736fe84",
+      "seconds": 0.02937917097005993,
+      "index_metadata": {
+        "chunker": "source-paragraphs-v3",
+        "extractor": "pdf-prose-v2",
+        "chunk_size": 500,
+        "chunk_max_characters": 4000,
+        "overlap": 50,
+        "embedding_model": "ollama:all-minilm",
+        "embedding_dimension": 384,
+        "embedding_revision_pinned": false,
+        "page_count": 1,
+        "chunk_count": 2
+      },
+      "warnings": []
+    },
+    {
+      "key": "offer",
+      "document_id": 3,
+      "sha256": "f5af74becd2fbe2a8b7c4fa0257d98737260fa40d66ff0b2d9fb7e6d3f08db84",
+      "seconds": 0.05078116798540577,
+      "index_metadata": {
+        "chunker": "source-paragraphs-v3",
+        "extractor": "pdf-prose-v2",
+        "chunk_size": 500,
+        "chunk_max_characters": 4000,
+        "overlap": 50,
+        "embedding_model": "ollama:all-minilm",
+        "embedding_dimension": 384,
+        "embedding_revision_pinned": false,
+        "page_count": 2,
+        "chunk_count": 2
+      },
+      "warnings": [
+        "PDF extraction preserves text, not visual layout. Verify tables, columns and image content against the source."
+      ]
+    },
+    {
+      "key": "table",
+      "document_id": 4,
+      "sha256": "9713fe21a8a88b0b46a1147b13bd6d172b3ea6f5770b848b7ed98c0fd41444ed",
+      "seconds": 0.035690212971530855,
+      "index_metadata": {
+        "chunker": "source-paragraphs-v3",
+        "extractor": "pdf-prose-v2",
+        "chunk_size": 500,
+        "chunk_max_characters": 4000,
+        "overlap": 50,
+        "embedding_model": "ollama:all-minilm",
+        "embedding_dimension": 384,
+        "embedding_revision_pinned": false,
+        "page_count": 1,
+        "chunk_count": 1
+      },
+      "warnings": [
+        "PDF extraction preserves text, not visual layout. Verify tables, columns and image content against the source."
+      ]
+    }
+  ],
+  "results": [
+    {
+      "id": "remote-exception",
+      "profile": "application",
+      "question": "Can every employee work remotely two days each week?",
+      "reference_answer": "Up to two days with manager approval, except onsite roles; contractors follow their contracts.",
+      "relevant_ids": [
+        1
+      ],
+      "status": "ok",
+      "answer": "Employees may work remotely on up to two weekdays each week, with manager approval. [1]\n\nThis allowance excludes roles requiring an onsite presence. [1]",
+      "sources": [
+        1
+      ],
+      "citations": [
+        {
+          "document_id": 1,
+          "title": "leave-policy.txt",
+          "chunk_index": 0,
+          "excerpt": "# Remote work\nEmployees may work remotely on up to two weekdays each week, with manager approval.\n\nThis allowance excludes roles requiring an onsite presence. Contractors follow the terms in their individual contracts.",
+          "marker": 1,
+          "section": "Remote work",
+          "chunk_end_index": 0,
+          "dense_score": 0.7810242408313909
+        }
+      ],
+      "citation_status": "valid",
+      "answer_origin": "model",
+      "generation_trace": {
+        "initial_generated_answer": "Employees may work remotely on up to two weekdays each week, with manager approval. [1]\n\nThis allowance excludes roles requiring an onsite presence. [1]",
+        "generated_answer": "Employees may work remotely on up to two weekdays each week, with manager approval. [1]\n\nThis allowance excludes roles requiring an onsite presence. [1]",
+        "citation_revision_attempted": false,
+        "citation_revised": false,
+        "citation_validation": {
+          "markers": [
+            1,
+            1
+          ],
+          "invalid_markers": [],
+          "uncited_blocks": [],
+          "valid": true
+        }
+      },
+      "document_recall": 1.0,
+      "review": {
+        "correct": true,
+        "refused": false,
+        "claims": [
+          {
+            "text": "Employees may work remotely on up to two weekdays each week, with manager approval. [1]",
+            "supported": true,
+            "cited": true,
+            "citation_supported": true
+          },
+          {
+            "text": "This allowance excludes roles requiring an onsite presence. [1]",
+            "supported": true,
+            "cited": true,
+            "citation_supported": true
+          }
+        ]
+      },
+      "elapsed_seconds": 13.854179046989884
+    },
+    {
+      "id": "retention-comparison",
+      "profile": "application",
+      "question": "How long are logs and encrypted database backups retained?",
+      "reference_answer": "Logs: 30 days. Encrypted backups: 90 days.",
+      "relevant_ids": [
+        2
+      ],
+      "status": "ok",
+      "answer": "Logs are retained for 30 days. [1]\n\nEncrypted database backups are retained for 90 days. [1]",
+      "sources": [
+        2
+      ],
+      "citations": [
+        {
+          "document_id": 2,
+          "title": "security-policy.txt",
+          "chunk_index": 1,
+          "excerpt": "# Retention\nApplication logs are retained for 30 days. Encrypted database backups are retained for 90 days.",
+          "marker": 1,
+          "section": "Retention",
+          "chunk_end_index": 1,
+          "dense_score": 0.8352589885079197
+        }
+      ],
+      "citation_status": "valid",
+      "answer_origin": "model",
+      "generation_trace": {
+        "initial_generated_answer": "Logs are retained for 30 days. [1]\n\nEncrypted database backups are retained for 90 days. [1]",
+        "generated_answer": "Logs are retained for 30 days. [1]\n\nEncrypted database backups are retained for 90 days. [1]",
+        "citation_revision_attempted": false,
+        "citation_revised": false,
+        "citation_validation": {
+          "markers": [
+            1,
+            1
+          ],
+          "invalid_markers": [],
+          "uncited_blocks": [],
+          "valid": true
+        }
+      },
+      "document_recall": 1.0,
+      "review": {
+        "correct": true,
+        "refused": false,
+        "claims": [
+          {
+            "text": "Logs are retained for 30 days. [1]",
+            "supported": true,
+            "cited": true,
+            "citation_supported": true
+          },
+          {
+            "text": "Encrypted database backups are retained for 90 days. [1]",
+            "supported": true,
+            "cited": true,
+            "citation_supported": true
+          }
+        ]
+      },
+      "elapsed_seconds": 17.347295062965713
+    },
+    {
+      "id": "personal-salary",
+      "profile": "application",
+      "question": "What is my monthly gross pay?",
+      "reference_answer": "INR 100,000 monthly gross before deductions.",
+      "relevant_ids": [
+        3
+      ],
+      "status": "ok",
+      "answer": "Monthly gross pay before deductions is **INR 100,000.00**. [1]",
+      "sources": [
+        3
+      ],
+      "citations": [
+        {
+          "document_id": 3,
+          "title": "offer-letter.pdf",
+          "chunk_index": 0,
+          "excerpt": "Alice Morgan is offered a position in the engineering department. The appointment includes ongoing participation in internal product development and collaborative planning activities with the wider engineering team. The role includes ongoing review of engineering designs and collaboration with colleagues across product planning and implementation activities. The employee will participate in scheduled reviews of project objectives and coordinate development work with the engineering team.\n\nHer monthly gross salary is INR 100,000. Final take-home pay is not specified.",
+          "marker": 1,
+          "page_start": 1,
+          "page_end": 2,
+          "chunk_end_index": 1,
+          "dense_score": 0.5479901577485383
+        }
+      ],
+      "citation_status": "valid",
+      "answer_origin": "deterministic_salary",
+      "generation_trace": {
+        "initial_generated_answer": "Monthly gross pay before deductions is **INR 100,000.00**. [1]",
+        "generated_answer": "Monthly gross pay before deductions is **INR 100,000.00**. [1]",
+        "citation_revision_attempted": false,
+        "citation_revised": false,
+        "citation_validation": {
+          "markers": [
+            1
+          ],
+          "invalid_markers": [],
+          "uncited_blocks": [],
+          "valid": true
+        }
+      },
+      "document_recall": 1.0,
+      "review": {
+        "correct": true,
+        "refused": false,
+        "claims": [
+          {
+            "text": "Monthly gross pay before deductions is **INR 100,000.00**. [1]",
+            "supported": true,
+            "cited": true,
+            "citation_supported": true
+          }
+        ]
+      },
+      "elapsed_seconds": 0.5025567259872332
+    },
+    {
+      "id": "private-salary",
+      "profile": "application",
+      "question": "What is Alice Morgan monthly gross pay?",
+      "reference_answer": "Cannot establish Alice Morgan pay from documents available to Bob.",
+      "relevant_ids": [],
+      "status": "no_context",
+      "answer": "No usable excerpts were found for this question. Check your documents or try a more specific question.",
+      "sources": [],
+      "citations": [],
+      "generation_trace": {},
+      "document_recall": null,
+      "review": {
+        "correct": true,
+        "refused": true,
+        "claims": []
+      },
+      "elapsed_seconds": 0.02333153603831306
+    },
+    {
+      "id": "table-allowance",
+      "profile": "application",
+      "question": "What is the equipment allowance?",
+      "reference_answer": "INR 5,000 equipment allowance.",
+      "relevant_ids": [
+        4
+      ],
+      "status": "ok",
+      "answer": "The equipment allowance is INR 5,000. [1]",
+      "sources": [
+        4
+      ],
+      "citations": [
+        {
+          "document_id": 4,
+          "title": "allowances.pdf",
+          "chunk_index": 0,
+          "excerpt": "ALLOWANCES\nEquipment | INR 5,000.\nTravel | INR 2,000.",
+          "marker": 1,
+          "page_start": 1,
+          "page_end": 1,
+          "section": "ALLOWANCES",
+          "chunk_end_index": 0,
+          "dense_score": 0.7101344733782473
+        }
+      ],
+      "citation_status": "valid",
+      "answer_origin": "model",
+      "generation_trace": {
+        "initial_generated_answer": "The equipment allowance is INR 5,000. [1]",
+        "generated_answer": "The equipment allowance is INR 5,000. [1]",
+        "citation_revision_attempted": false,
+        "citation_revised": false,
+        "citation_validation": {
+          "markers": [
+            1
+          ],
+          "invalid_markers": [],
+          "uncited_blocks": [],
+          "valid": true
+        }
+      },
+      "document_recall": 1.0,
+      "review": {
+        "correct": true,
+        "refused": false,
+        "claims": [
+          {
+            "text": "The equipment allowance is INR 5,000. [1]",
+            "supported": true,
+            "cited": true,
+            "citation_supported": true
+          }
+        ]
+      },
+      "elapsed_seconds": 13.305092037015129
+    },
+    {
+      "id": "unsupported",
+      "profile": "application",
+      "question": "What is the CEO private telephone number?",
+      "reference_answer": "The available documents do not provide this information.",
+      "relevant_ids": [],
+      "status": "no_context",
+      "answer": "No usable excerpts were found for this question. Check your documents or try a more specific question.",
+      "sources": [],
+      "citations": [],
+      "generation_trace": {},
+      "document_recall": null,
+      "review": {
+        "correct": true,
+        "refused": true,
+        "claims": []
+      },
+      "elapsed_seconds": 0.4877042730222456
+    }
+  ],
+  "caveat": "Application-service regression on development fixtures. Correctness and claim support require explicit review. Timings include application ingestion/retrieval/generation, excluding network UI overhead.",
+  "runtime": {
+    "RETRIEVAL_STRATEGY": "dense",
+    "RETRIEVAL_TOP_K": 5,
+    "RETRIEVAL_CANDIDATES": 20,
+    "RETRIEVAL_MIN_SIMILARITY": 0.3,
+    "RETRIEVAL_NEIGHBORS": 1,
+    "RETRIEVAL_CONTEXT_CHARACTERS": 24000,
+    "RERANKER_MODE": "none",
+    "RERANKER_MODEL": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+    "EMBEDDING_BACKEND": "ollama",
+    "EMBEDDING_MODEL": "all-minilm",
+    "EMBEDDING_REVISION": "",
+    "OLLAMA_CHAT_MODEL": "qwen2.5:3b",
+    "FINANCIAL_CALCULATIONS_ENABLED": true,
+    "GENERATION_CONTEXT_TOKENS": 16384,
+    "GENERATION_MAX_TOKENS": 1024,
+    "GENERATION_TEMPERATURE": 0.0
+  },
+  "review_provenance": {
+    "reviewer": "Codex source inspection",
+    "independent_human_review": false,
+    "notes": "Development fixtures inspected against the supplied source passages. These are assisted review labels, not an independent production acceptance benchmark."
+  }
+}

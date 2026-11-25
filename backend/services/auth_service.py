@@ -8,7 +8,7 @@ from repositories.user_repository import UserRepository
 
 class AuthService:
     @staticmethod
-    def register_user(db, enterprise_name, email, password):
+    def register_user(db, enterprise_name, email, password, name=""):
         # One transaction: a failed account cannot leave an orphan workspace.
         if UserRepository.get_by_email(db, email):
             raise ValueError("Account or workspace already exists")
@@ -18,6 +18,7 @@ class AuthService:
             db.flush()
             user = User(
                 enterprise_id=enterprise.id,
+                name=name,
                 email=email,
                 hashed_password=hash_password(password),
                 role="admin",

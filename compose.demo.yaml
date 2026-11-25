@@ -1,0 +1,36 @@
+# Private-host demo exposed through a separately managed HTTPS tunnel.
+# Docker Compose v2.24.4+ is required for !reset.
+# Always combine with compose.yaml and the same existing project name.
+x-demo-logging: &demo_logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  api:
+    ports: !reset []
+    environment:
+      PUBLIC_APP_URL: ${DEMO_PUBLIC_APP_URL:-http://localhost:8080}
+      LOCAL_DIRECT_PASSWORD_RESET: "false"
+      PUBLIC_REGISTRATION_ENABLED: "false"
+      CORS_ORIGINS: "[]"
+    restart: unless-stopped
+    logging: *demo_logging
+  ingestion_worker:
+    environment:
+      PUBLIC_APP_URL: ${DEMO_PUBLIC_APP_URL:-http://localhost:8080}
+      LOCAL_DIRECT_PASSWORD_RESET: "false"
+      PUBLIC_REGISTRATION_ENABLED: "false"
+      CORS_ORIGINS: "[]"
+    restart: unless-stopped
+    logging: *demo_logging
+  web:
+    restart: unless-stopped
+    logging: *demo_logging
+  postgres:
+    restart: unless-stopped
+    logging: *demo_logging
+  ollama:
+    restart: unless-stopped
+    logging: *demo_logging

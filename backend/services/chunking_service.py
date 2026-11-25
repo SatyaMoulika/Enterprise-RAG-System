@@ -6,6 +6,20 @@ from dataclasses import dataclass
 from core.config import settings
 from core.errors import InvalidDocument, UploadTooLarge
 
+CHUNKER_VERSION = "source-paragraphs-v3"
+
+
+@dataclass(frozen=True)
+class SourceChunk:
+    chunk_text: str
+    page_start: int | None
+    page_end: int | None
+    section: str | None
+    section_key: str
+    start_offset: int
+    end_offset: int
+
+
 _ABBREVIATIONS = {
     "dr.",
     "mr.",
@@ -90,7 +104,16 @@ class ChunkingService:
             chunks.append(_join(current))
 
         for number, paragraph in enumerate(re.split(r"\n\s*\n", text.strip())):
-            for sentence in _sentences(paragraph):
+            # Tables/list blocks are structural units. Sentence joining must not flatten rows.
+            structured = any(
+                "\t" in line or "|" in line or re.match(r"\s*(?:[-*•]|\d+[.)])\s", line)
+                for line in paragraph.splitlines()
+            )
+            # Keep a paragraph together when it fits. Only oversized paragraphs
+            # need sentence grouping; whitespace splitting is the final hard-limit fallback.
+            for sentence in (
+                [paragraph] if structured or len(paragraph) <= target else _sentences(paragraph)
+            ):
                 for unit in _bounded_units(sentence, number, maximum):
                     if current and len(_join([*current, unit])) > target:
                         emit()
@@ -107,4 +130,48 @@ class ChunkingService:
                     current.append(unit)
         if current:
             emit()
+        return chunks
+
+    @staticmethod
+    def chunk_document(document) -> list[SourceChunk]:
+        """Keep page/section boundaries and map each excerpt back to source offsets."""
+        chunks = []
+        section = None
+        section_number = 0
+        heading = re.compile(r"^(?:#{1,6}\s+[^\n]+|[A-Z][A-Z \d/&()-]{2,99})[ \t]*$", re.M)
+        for page in document.pages:
+            boundaries = [
+                0,
+                *[m.start() for m in heading.finditer(page.text) if m.start()],
+                len(page.text),
+            ]
+            for start, end in zip(boundaries, boundaries[1:]):
+                block = page.text[start:end]
+                match = heading.match(block)
+                if match:
+                    section = match.group(0).strip().lstrip("#").strip()
+                    section_number += 1
+                cursor = 0
+                for text in ChunkingService.chunk_text(block):
+                    # Whitespace may have been unfolded; cite the exact original source span.
+                    pattern = r"\s+".join(re.escape(word) for word in text.split())
+                    location = re.search(pattern, block[cursor:])
+                    if location is None:
+                        raise InvalidDocument("Unable to map a chunk to its source")
+                    left, right = cursor + location.start(), cursor + location.end()
+                    chunks.append(
+                        SourceChunk(
+                            block[left:right],
+                            page.number,
+                            page.number,
+                            section,
+                            f"section-{section_number}",
+                            start + left,
+                            start + right,
+                        )
+                    )
+                    # Search after the previous start, allowing whole-unit overlap.
+                    cursor = left + 1
+                    if len(chunks) > settings.MAX_DOCUMENT_CHUNKS:
+                        raise UploadTooLarge("Document has too many chunks")
         return chunks

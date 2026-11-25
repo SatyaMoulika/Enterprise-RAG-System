@@ -81,7 +81,8 @@ def create_user_access_token(email: str, user_id: int, password_hash: str) -> st
 def token_matches_account(payload: dict, user_id: int, password_hash: str) -> bool:
     stamp = payload.get("account_stamp")
     return (
-        payload.get("user_id") == str(user_id)
+        payload.get("purpose", "access") == "access"
+        and payload.get("user_id") == str(user_id)
         and isinstance(stamp, str)
         and hmac.compare_digest(stamp, _account_stamp(user_id, password_hash))
     )

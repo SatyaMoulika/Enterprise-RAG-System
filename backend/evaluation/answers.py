@@ -203,7 +203,28 @@ def evaluate_answers(
     }
 
 
-def summarize_reviews(report: dict) -> dict:
+def summarize_reviews(report: dict, *, require_complete=False) -> dict:
+    missing = []
+    for row in report["results"]:
+        review = row.get("review", {})
+        if row["status"] not in {"ok", "no_context"}:
+            missing.append(f"{row['id']}: pipeline error")
+        elif type(review.get("correct")) is not bool or type(review.get("refused")) is not bool:
+            missing.append(f"{row['id']}: answer not reviewed")
+        elif not review["refused"] and (
+            not review.get("claims")
+            or any(
+                type(claim.get("supported")) is not bool
+                or type(claim.get("cited")) is not bool
+                or (claim.get("cited") and type(claim.get("citation_supported")) is not bool)
+                for claim in review.get("claims", [])
+            )
+        ):
+            missing.append(f"{row['id']}: claims not fully reviewed")
+    if require_complete and (missing or not report["results"]):
+        raise ValueError(
+            "Quality gate requires completed answer/claim reviews and no pipeline errors"
+        )
     groups = {}
     seen = set()
     for row in report["results"]:
@@ -283,5 +304,7 @@ def summarize_reviews(report: dict) -> dict:
         }
     return {
         "profiles": output,
+        "quality_review_complete": bool(report["results"]) and not missing,
+        "incomplete_review_rows": len(missing),
         "caveat": "Metrics cover only explicitly reviewed answers/claims. Null means not reviewed, not perfect or zero. Human labels are not an automatic proof of correctness.",
     }

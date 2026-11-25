@@ -1,0 +1,5 @@
+# Account removal
+Removing an employee invalidates future authenticated requests. Recreating the same email address does not reactivate old tokens.
+
+# Retention
+Application logs are retained for 30 days. Encrypted database backups are retained for 90 days.

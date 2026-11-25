@@ -31,8 +31,14 @@ def main():
     parser.add_argument("--k", type=int, default=5)
     parser.add_argument("--candidate-k", type=int, default=20)
     parser.add_argument("--context-characters", type=int, default=24000)
+    parser.add_argument("--min-similarity", type=float, default=0.0)
     args = parser.parse_args()
-    if args.k < 1 or args.candidate_k < args.k or args.context_characters < 1:
+    if (
+        args.k < 1
+        or args.candidate_k < args.k
+        or args.context_characters < 1
+        or not -1 <= args.min_similarity <= 1
+    ):
         parser.error("Invalid retrieval limits")
     if args.strategy != "bm25" and not args.allow_inference:
         parser.error(
@@ -94,6 +100,7 @@ def main():
                 top_k=args.k,
                 candidate_k=args.candidate_k,
                 context_characters=args.context_characters,
+                min_similarity=args.min_similarity,
             )
             results.append(
                 {
@@ -138,6 +145,7 @@ def main():
                 "limits": {
                     "candidate_k": args.candidate_k,
                     "context_characters": args.context_characters,
+                    "min_similarity": args.min_similarity,
                 },
                 "caveat": "Synthetic retrieval regression only. Ranking time excludes database, embeddings and generation. No faithfulness, answer correctness, citation accuracy or production quality claim.",
                 "reports": reports,
