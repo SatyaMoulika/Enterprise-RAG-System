@@ -17,11 +17,13 @@ export function ChatPanel({
   onOpenDocuments,
   document,
   onClearScope,
+  initialQuestion,
 }: {
   api: ApiClient;
   onOpenDocuments: () => void;
   document?: DocumentRecord | null;
   onClearScope?: () => void;
+  initialQuestion?: { text: string; id: number } | null;
 }) {
   const [activeCitation, setActiveCitation] = useState<{ turn: number; marker: number } | null>(
     null,
@@ -38,6 +40,9 @@ export function ChatPanel({
   const active = useRef<AbortController | null>(null);
   const input = useRef<HTMLTextAreaElement>(null);
   useEffect(() => () => active.current?.abort(), []);
+  useEffect(() => {
+    if (initialQuestion) setQuestion(initialQuestion.text);
+  }, [initialQuestion]);
   async function ask(event: FormEvent) {
     event.preventDefault();
     if (pending.current) return;

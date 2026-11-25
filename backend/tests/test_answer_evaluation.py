@@ -141,7 +141,19 @@ def test_optional_reranker_orders_full_candidate_pool_before_context_selection()
     rows = [SearchChunk(i, i, "p.txt", 0, f"Policy {i}", [1, 0]) for i in range(1, 7)]
     from services.search import select_context
 
+    class Tokenizer:
+        def encode(self, text, **kwargs):
+            return list(text.encode())
+
+        def decode(self, values):
+            return bytes(values).decode()
+
+        def num_special_tokens_to_add(self, **kwargs):
+            return 3
+
     class Model:
+        tokenizer = Tokenizer()
+
         def predict(self, pairs, **kwargs):
             return list(range(len(pairs)))
 
@@ -187,7 +199,7 @@ def test_evaluation_uses_the_same_prompt_contract_as_the_application():
     assert value["messages"][0]["role"] == "system"
     assert "untrusted" in value["messages"][0]["content"]
     assert value["messages"][1]["content"].endswith("Question:\nquestion")
-    assert "options" not in value
+    assert value["options"]["num_predict"] == 1024
 
 
 def test_answer_cli_requires_inference_selection_before_provider_calls():
@@ -346,9 +358,9 @@ def test_prompt_variants_preserve_user_context_and_sampling_controls():
     ]
     assert len({v["messages"][0]["content"] for v in values}) == len(PROMPTS)
     assert all(v["messages"][1] == values[0]["messages"][1] for v in values)
-    assert all(v["options"] == {"temperature": 0} for v in values)
+    assert all(v["options"]["temperature"] == 0 for v in values)
     assert context in values[0]["messages"][1]["content"]
-    assert "options" not in chat_payload("q", context, "model")
+    assert "temperature" not in chat_payload("q", context, "model")["options"]
 
 
 @pytest.mark.parametrize(

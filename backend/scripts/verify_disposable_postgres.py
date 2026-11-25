@@ -8,7 +8,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from sqlalchemy import create_engine, inspect
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import make_url
 
 parser = argparse.ArgumentParser()
@@ -23,8 +23,13 @@ if (
 ):
     parser.error("Use --confirm-disposable with an empty local database named rag_release_test")
 probe = create_engine(args.database_url)
-if inspect(probe).get_table_names():
+tables = set(inspect(probe).get_table_names())
+if tables - {"alembic_version"}:
     raise SystemExit("Refusing to test a database that already has tables")
+if "alembic_version" in tables:
+    with probe.connect() as connection:
+        if connection.execute(text("SELECT version_num FROM alembic_version")).first():
+            raise SystemExit("Refusing to test a database with an applied schema version")
 probe.dispose()
 
 os.environ["DATABASE_URL"] = args.database_url
@@ -42,6 +47,7 @@ from core.config import settings  # noqa: E402
 from database.session import SessionLocal, engine  # noqa: E402
 from main import app  # noqa: E402
 from models.user import User  # noqa: E402
+from services.document_service import DocumentService  # noqa: E402
 from services.embedding_service import EmbeddingService  # noqa: E402
 from services.llm_service import LLMService  # noqa: E402
 from services.user_service import UserService  # noqa: E402
@@ -84,6 +90,22 @@ with TemporaryDirectory(prefix="rag-postgres-test-") as directory:
         )
         assert chat.status_code == 200, chat.text
         assert chat.json()["citations"][0]["document_id"] == identity
+        # Rebuild/replacement must preserve identity and swap the active index only on success.
+        assert client.post(f"/documents/{identity}/reindex", headers=headers).status_code == 202
+        with SessionLocal() as db:
+            assert DocumentService.process_next(db)
+        replacement = client.post(
+            f"/documents/{identity}/replace",
+            headers=headers,
+            files={"file": ("policy.txt", b"The office opens at ten.")},
+        )
+        assert replacement.status_code == 202, replacement.text
+        with SessionLocal() as db:
+            assert DocumentService.process_next(db)
+        updated = client.post(
+            "/chat/generate", headers=headers, json={"question": "When does the office open?"}
+        )
+        assert "ten" in updated.json()["citations"][0]["excerpt"]
         other = client.post(
             "/auth/register",
             json={
@@ -161,5 +183,5 @@ with TemporaryDirectory(prefix="rag-postgres-test-") as directory:
 command.downgrade(config, "base")
 engine.dispose()
 print(
-    "PostgreSQL smoke passed: migrations/schema parity, readiness, registration, upload, JSON vectors, citation retrieval, tenant isolation, deletion and concurrent administrator removal protection. Inference was mocked."
+    "PostgreSQL smoke passed: migrations/schema parity, readiness, registration, upload, reindex, atomic replacement, JSON vectors, citation retrieval, tenant isolation, deletion and concurrent administrator removal protection. Inference was mocked."
 )

@@ -51,3 +51,40 @@ def test_document_access_upgrade_preserves_existing_company_documents(tmp_path, 
             == "company"
         )
     engine.dispose()
+
+
+def test_provenance_upgrade_preserves_existing_chunks(tmp_path, monkeypatch):
+    from sqlalchemy import text
+
+    url = f"sqlite:///{tmp_path / 'provenance-upgrade.db'}"
+    monkeypatch.setattr(settings, "DATABASE_URL", url)
+    config = Config(str(Path(__file__).resolve().parents[1] / "alembic.ini"))
+    command.upgrade(config, "0004")
+    engine = create_engine(url)
+    with engine.begin() as connection:
+        connection.execute(
+            text("INSERT INTO enterprises (id, name) VALUES (1, 'Existing workspace')")
+        )
+        connection.execute(
+            text(
+                "INSERT INTO documents (id, enterprise_id, title, file_path) VALUES (1, 1, 'Existing.txt', '/tmp/existing.txt')"
+            )
+        )
+        connection.execute(
+            text(
+                "INSERT INTO document_chunks (id, document_id, enterprise_id, chunk_text, chunk_index, embedding, embedding_model) VALUES (1, 1, 1, 'Existing evidence.', 0, '[1,0]', 'ollama:old-model')"
+            )
+        )
+    command.upgrade(config, "head")
+    with engine.connect() as connection:
+        row = connection.execute(
+            text(
+                "SELECT chunk_text, embedding_model, page_start, section_key FROM document_chunks WHERE id=1"
+            )
+        ).one()
+        assert tuple(row) == ("Existing evidence.", "ollama:old-model", None, None)
+        assert (
+            connection.execute(text("SELECT index_status FROM documents WHERE id=1")).scalar_one()
+            == "ready"
+        )
+    engine.dispose()

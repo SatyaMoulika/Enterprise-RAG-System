@@ -15,6 +15,9 @@ interface Session {
 }
 function Workspace({ session, onSignOut }: { session: Session; onSignOut: () => void }) {
   const [profile, setProfile] = useState(session.user);
+  const [quickQuestion, setQuickQuestion] = useState<{ text: string; id: number } | null>(null);
+  const [membersCount, setMembersCount] = useState<number | null>(null);
+  const [uploadRequest, setUploadRequest] = useState(0);
   const [view, setView] = useState('overview');
   const [documents, setDocuments] = useState<DocumentRecord[] | null>(null);
   const [overviewError, setOverviewError] = useState('');
@@ -26,6 +29,20 @@ function Workspace({ session, onSignOut }: { session: Session; onSignOut: () => 
   const membersChanged = useCallback(() => setMembersRevision((n) => n + 1), []);
   const [chatDocument, setChatDocument] = useState<DocumentRecord | null>(null);
   const api = useMemo(() => new ApiClient(session.token, onSignOut), [session.token, onSignOut]);
+  useEffect(() => {
+    if (session.user.role !== 'admin') return;
+    const controller = new AbortController();
+    setMembersCount(null);
+    void api
+      .members(controller.signal)
+      .then((rows) => {
+        if (!controller.signal.aborted) setMembersCount(rows.length);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setMembersCount(null);
+      });
+    return () => controller.abort();
+  }, [api, session.user.role, membersRevision]);
   const organisationName = profile.enterprise_name?.trim() || 'Your organisation';
   useEffect(() => {
     const page =
@@ -86,6 +103,16 @@ function Workspace({ session, onSignOut }: { session: Session; onSignOut: () => 
               documents={documents}
               error={overviewError}
               onOpenDocuments={() => setView('documents')}
+              onUpload={() => {
+                setUploadRequest((value) => value + 1);
+                setView('documents');
+              }}
+              membersCount={membersCount}
+              onQuickAsk={(text) => {
+                setChatDocument(null);
+                setQuickQuestion({ text, id: Date.now() });
+                setView('chat');
+              }}
               onAsk={() => {
                 setChatDocument(null);
                 setView('chat');
@@ -101,6 +128,7 @@ function Workspace({ session, onSignOut }: { session: Session; onSignOut: () => 
             <ChatPanel
               key={chatDocument?.id || 'all'}
               document={chatDocument}
+              initialQuestion={quickQuestion}
               onClearScope={() => setChatDocument(null)}
               api={api}
               onOpenDocuments={() => setView('documents')}
@@ -109,6 +137,7 @@ function Workspace({ session, onSignOut }: { session: Session; onSignOut: () => 
           <div hidden={view !== 'documents'}>
             <DocumentsPanel
               api={api}
+              uploadRequest={uploadRequest}
               isAdmin={session.user.role === 'admin'}
               onDocumentsChange={documentsChanged}
               membersRevision={membersRevision}

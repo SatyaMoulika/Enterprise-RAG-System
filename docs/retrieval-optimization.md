@@ -77,3 +77,27 @@ Existing vectors are reused: no document re-upload, migration, volume reset or m
 3. Add conversation-aware query rewriting only with explicit history handling and tests against invented names/constraints.
 4. Calibrate evidence rejection with labelled unanswerable questions. RRF/cosine scores must not be displayed as answer-confidence percentages.
 5. Evaluate generated answer correctness, faithfulness and citation support separately; this retrieval runner does not measure those.
+
+## Pipeline hardening after the source audit
+
+Retrieval now uses streaming exact cosine/BM25 scoring with bounded vector memory, rather than loading every vector or refusing workspaces at 10,000 chunks. These remain linear scans: large-corpus latency still needs measurement and an indexed search backend if justified. `MAX_RETRIEVAL_CHUNKS` is retained for configuration compatibility but no longer caps streaming retrieval. Both in-memory evaluations and database retrieval share the ranking implementation. BM25 can retrieve text indexed with another embedding model; hybrid uses lexical evidence for those chunks without mixing incompatible dense vectors.
+
+`RETRIEVAL_MIN_SIMILARITY` rejects dense scores at or below the configured cosine cutoff. The default `0.3` was checked with all-minilm on the synthetic source and retrieval regressions. It is a development cutoff, not a probability or a production answerability guarantee. Recalibrate for other models and representative documents. Lexical candidates in hybrid mode can survive independently. Similarity and lexical scores are returned as diagnostic source fields, never probabilities. Use original-source development reports to explore thresholds:
+
+```sh
+python scripts/calibrate_retrieval.py --report source-review.json
+```
+
+The script proposes a development cutoff and never changes application settings. Validate it on held-out documents with both supported and unsupported questions; its selected-context scores can be censored by an existing cutoff or context budget. A score cutoff cannot prove that a chunk supports the specific requested claim.
+
+New chunks retain page, section and source offsets. Up to `RETRIEVAL_NEIGHBORS` adjacent chunks are reconstructed on either side of an anchor only within a known contiguous section. Contained fragments and strongly overlapping source spans are suppressed. `RETRIEVAL_MAX_DOCUMENT_CHUNKS` bounds one document's contribution; tune it for questions needing many passages from a single source. Expansion has no permission bypass: adjacent chunks pass the same workspace/access filter. Legacy chunks get provenance after reindexing.
+
+Generation reserves `GENERATION_MAX_TOKENS` inside `GENERATION_CONTEXT_TOKENS` and includes the complete instructions and question in a conservative UTF-8 byte budget. Evidence is skipped rather than cut to fit. Ollama embedding calls disable truncation; the local embedding backend checks its tokenizer limit. Oversized embedding inputs fail with an actionable error rather than producing partial vectors. The optional reranker scores overlapping token windows and takes each passage's maximum window score so evidence at the end is considered.
+
+`EMBEDDING_REVISION` is optional. For Ollama, set the expected model digest from `/api/tags`; the service checks it before and after embedding. For SentenceTransformers, set a Hugging Face commit revision. The revision becomes part of index identity. Without it, model-name mutation remains possible and metadata explicitly records that the revision is unpinned. Changing the model/revision requires reindexing for dense retrieval.
+
+## Selected-file questions
+
+When `document_id` is supplied, a short accessible document is read in full, in chunk order, within the complete generation/context budget. This path does not require query embeddings or similarity filtering: selecting a file is an explicit request to read that file. It also works with older embedding-model metadata, since no incompatible vectors are compared. Access and workspace checks still run before any text is read.
+
+Files too large for a full-context read use hybrid search within the selected document (or the configured lexical strategy). This scoped dense search rejects nonpositive similarity rather than applying the workspace-wide 0.3 cutoff; lexical matching remains available when query embeddings are unavailable. Global search retains its configured cutoff. A selected file never broadens the search to another document, so asking about Alice while Bob's offer is selected can correctly produce an unsupported-answer response.

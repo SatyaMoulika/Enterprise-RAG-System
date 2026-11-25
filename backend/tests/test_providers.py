@@ -56,16 +56,24 @@ def test_provider_timeout_is_sanitized(monkeypatch):
 def test_chat_instructions_and_response(monkeypatch):
     def post(url, **kwargs):
         assert url.endswith("/api/chat")
-        assert kwargs["json"] == chat_payload("test", "context", settings.OLLAMA_CHAT_MODEL)
-        assert "options" not in kwargs["json"]
+        assert kwargs["json"] == chat_payload(
+            "test",
+            "context",
+            settings.OLLAMA_CHAT_MODEL,
+            temperature=settings.GENERATION_TEMPERATURE,
+            structured=True,
+        )
+        assert kwargs["json"]["options"]["num_ctx"] == settings.GENERATION_CONTEXT_TOKENS
         messages = kwargs["json"]["messages"]
         assert messages[0]["role"] == "system"
         assert "untrusted" in messages[0]["content"]
         assert messages[1]["role"] == "user"
-        return response({"message": {"content": "Supported answer [1]."}})
+        return response(
+            {"message": {"content": '{"sentences":[{"text":"Supported answer.","sources":[1]}]}'}}
+        )
 
     monkeypatch.setattr(httpx, "post", post)
-    assert LLMService.generate("test", "context") == "Supported answer [1]."
+    assert LLMService.generate("test", "context") == "Supported answer. [1]"
 
 
 def test_context_keeps_citation_mapping_without_internal_chunk_labels():
@@ -81,3 +89,40 @@ def test_context_keeps_citation_mapping_without_internal_chunk_labels():
         "[1] Offer.pdf\nYour role is AI Engineer.\n\n[2] Appointment.pdf\nYour manager is Maya."
     )
     assert "(chunk" not in value
+
+
+def test_structured_sources_are_rendered_for_each_sentence_and_preserve_citation_identity(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        httpx,
+        "post",
+        lambda *args, **kwargs: response(
+            {
+                "message": {
+                    "content": '{"sentences":[{"text":"Remote work requires approval. Onsite roles are excluded.","sources":[2,2]}]}'
+                }
+            }
+        ),
+    )
+    assert (
+        LLMService.generate("remote work?", "context")
+        == "Remote work requires approval. [2]\n\nOnsite roles are excluded. [2]"
+    )
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        "not JSON",
+        '{"sentences":[]}',
+        '{"sentences":[{"text":"Claim.","sources":[true]}]}',
+        '{"sentences":[{"text":"Claim.","sources":[0]}]}',
+    ],
+)
+def test_invalid_structured_answers_fail_explicitly(monkeypatch, content):
+    monkeypatch.setattr(
+        httpx, "post", lambda *args, **kwargs: response({"message": {"content": content}})
+    )
+    with pytest.raises(ProviderUnavailable):
+        LLMService.generate("question", "context")

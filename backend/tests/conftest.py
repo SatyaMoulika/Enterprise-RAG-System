@@ -4,6 +4,7 @@ import os
 
 os.environ["DATABASE_URL"] = "sqlite://"
 os.environ["JWT_SECRET_KEY"] = "test-only-secret-never-use-in-production-123456"
+os.environ["LOCAL_DIRECT_PASSWORD_RESET"] = "false"
 
 import pytest
 from fastapi.testclient import TestClient
@@ -40,6 +41,9 @@ def db():
 
 @pytest.fixture
 def client(db, tmp_path, monkeypatch):
+    from services.llm_service import LLMService
+
+    monkeypatch.setattr(LLMService, "repair_citations", lambda *args: None)
     monkeypatch.setattr(settings, "UPLOAD_DIR", tmp_path / "uploads")
     monkeypatch.setattr(settings, "EMBEDDING_DIMENSION", 3)
     monkeypatch.setattr(settings, "EMBEDDING_BACKEND", "ollama")

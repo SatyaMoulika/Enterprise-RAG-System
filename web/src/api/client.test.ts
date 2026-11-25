@@ -23,6 +23,7 @@ describe('HTTP boundary', () => {
     await new ApiClient('token').upload(new File(['content'], 'policy.txt'));
     const options = fetcher.mock.calls[0][1];
     expect(options.body).toBeInstanceOf(FormData);
+    expect(options.body.get('background')).toBe('true');
     expect(options.headers.has('Content-Type')).toBe(false);
   });
   it('expires an authenticated session on 401 but not a failed login', async () => {

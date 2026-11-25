@@ -16,6 +16,7 @@ export function DocumentsPanel({
   api,
   isAdmin,
   onCount,
+  uploadRequest,
   onChat,
   membersRevision,
   onDocumentsChange,
@@ -23,6 +24,7 @@ export function DocumentsPanel({
   api: ApiClient;
   isAdmin: boolean;
   onCount?: (count: number) => void;
+  uploadRequest?: number;
   onChat?: (document: DocumentRecord) => void;
   membersRevision?: number;
   onDocumentsChange?: (documents: DocumentRecord[] | null, error?: string) => void;
@@ -50,6 +52,9 @@ export function DocumentsPanel({
   const [selected, setSelected] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
+  useEffect(() => {
+    if (uploadRequest && isAdmin) setShowUpload(true);
+  }, [uploadRequest, isAdmin]);
   const [deleting, setDeleting] = useState(false);
   const [confirm, setConfirm] = useState<DocumentRecord | null>(null);
   const [failedDocumentId, setFailedDocumentId] = useState<number | null>(null);

@@ -2,7 +2,9 @@
 
 A workspace-scoped document assistant: register an enterprise, upload UTF-8 text or text-based PDFs, ask questions, and inspect the retrieved excerpts that support an answer. FastAPI, PostgreSQL and a configurable Ollama inference service.
 
-This branch establishes a tested backend foundation. It is **not yet a public production release**. The active interface is now a Porcelain & Azure React workspace in `web/`. The original Streamlit client remains as a transitional reference. Public-production release gates still apply.
+This branch establishes a tested backend foundation. It is **not yet a public production release**. The active interface is a full-width React workspace in `web/`, with Overview as the landing page, My documents, Ask documents, and administrator member management. Public-production release gates still apply.
+
+For hosting without buying a server or domain, see the [free deployment guide](deploy/FREE-DEPLOYMENT-GUIDE.md). It includes step-by-step local HTTPS sharing, private access, an optional free cloud VM, account setup, backups and troubleshooting.
 
 ## First local run
 
@@ -12,12 +14,12 @@ Requires Docker Compose and sufficient RAM/disk for the selected Ollama models. 
 2. Start the services and explicitly download the models:
 
 ```sh
-docker compose up -d --build
-docker compose exec ollama ollama pull all-minilm
-docker compose exec ollama ollama pull qwen2.5:3b
+docker compose -p rag-updated up -d --build
+docker compose -p rag-updated exec ollama ollama pull all-minilm
+docker compose -p rag-updated exec ollama ollama pull qwen2.5:3b
 ```
 
-3. Open `http://127.0.0.1:8080` for the React workspace. Create a workspace, upload a document, and ask a question. Backend API docs remain at `http://localhost:8000/docs`.
+3. Open `http://127.0.0.1:8080` for the React workspace. Create a workspace, upload a document, and ask a question. Backend API docs remain at `http://localhost:8001/docs`.
 
 The API is bound to localhost. Database and inference ports are not exposed. The API image build and startup were verified against disposable PostgreSQL. Actual model inference must still be verified on the deployment host; the unit/integration tests substitute provider responses and never download weights.
 
@@ -36,13 +38,7 @@ uv run --directory backend uvicorn main:app --reload
 
 To start the React workspace alongside the backend, follow the [React frontend setup](#react-frontend).
 
-The existing Streamlit client remains under `frontend/`. Install its optional dependencies and start it with:
-
-```sh
-uv run --directory backend --extra legacy-ui streamlit run ../frontend/app.py
-```
-
-Set `RAG_API_BASE_URL` for a nondefault API origin. Its requests have finite timeouts. For the active React interface, see [web/README.md](web/README.md). Deployment-wide request throttling remains follow-up work.
+The active application interface is React in `web/`; see [web/README.md](web/README.md). The unused Streamlit client has been removed.
 
 ## Verify
 
@@ -70,9 +66,9 @@ Open `http://127.0.0.1:5173`. The Vite proxy keeps API requests on the same brow
 
 - Each registration creates a new workspace and its administrator in one transaction; duplicate workspace names do not grant membership.
 - Administrators manage uploads and users. Active members can list their workspace documents and ask questions. Deactivated users cannot continue using old tokens.
-- Uploads are restricted by type, byte size, extracted text size and chunk count. Files receive random server-side paths; failures clean up files and roll back records.
+- Uploads are restricted by type, byte size, extracted text size and chunk count. Files receive random server-side paths. The React client queues indexing in a bounded worker; failures retain a safe status and source for retry. Synchronous integration uploads roll back and clean up on failure.
 - Embeddings, model identity and document chunks are stored together. Retrieval scopes by current workspace and live documents **before ranking**. Deletion removes chunks and vectors together.
-- Retrieval uses cosine similarity over a bounded set of persisted vectors. This small-corpus implementation trades FAISS speed for transactional correctness; use PostgreSQL/pgvector before increasing scale. A workspace beyond the configured bound returns an explicit capacity error.
+- Retrieval streams exact cosine/BM25/hybrid scoring with bounded vector memory. It does not impose the former 10,000-chunk ceiling, but still performs linear scans; evaluate an indexed backend when corpus size and measured latency require it.
 - Answers include `sources` (document IDs, kept for the old client) and structured `citations` (retrieved title, chunk and excerpt). These are retrieval provenance, **not proof that every generated claim is supported**. Evaluate grounding before public release.
 - HTTP provider calls have finite timeouts and sanitised errors. Importing the API never fetches model weights.
 
@@ -90,13 +86,13 @@ Administrators can now open **Members** in the React sidebar to add, list, searc
 
 ## Answer formatting and excerpt boundaries
 
-Answers render safe Markdown, including headings, lists, code and tables. New uploads use sentence-aware chunks with a soft size target, whole-unit overlap and conservative PDF line-wrap cleanup. See [formatting and re-indexing notes](docs/answer-format-and-chunking.md). Re-upload affected documents and remove old copies to replace already-stored character slices.
+Answers render safe Markdown, including headings, lists, code and tables. New uploads use sentence-aware chunks with a soft size target, whole-unit overlap and conservative PDF line-wrap cleanup. See [formatting and re-indexing notes](docs/answer-format-and-chunking.md). Use **Reindex** on existing documents to apply source-aware chunking without creating duplicate copies. The source sidebar groups references into one card per document, showing cited pages and a View document action instead of extracted chunks. Citation buttons select the corresponding document and page.
 
 ## Existing data
 
 Do not blindly run the initial migration against an existing manually created schema. Back up the database first and compare it with migration `0001`. Only if it matches, explicitly stamp `0001` and upgrade to `0002`; otherwise reconcile the schema first. No existing database has been inspected or modified by this change.
 
-Old FAISS files are no longer read. Existing chunks have null embeddings after migration and are excluded from retrieval. Re-upload the original documents after upgrading; confirm replacement documents answer correctly before deleting old records. Changing embedding model/backend requires re-indexing; vectors from different model identities are never mixed.
+Old FAISS files are no longer read. Legacy chunks without embeddings are excluded from dense retrieval; queue **Reindex** from their stored originals. Migration `0005` preserves existing files/chunks and adds provenance and indexing state. Old chunks receive page/section metadata on reindex. Model/backend/revision changes require reindexing for dense search; lexical retrieval remains available without mixing incompatible vectors.
 
 ## Before a public deployment
 
@@ -109,3 +105,9 @@ Employees can browse personal letters and company/restricted documents assigned 
 For financial qualifier handling and the evaluation-only claim-support reviewer, see [salary grounding and regression checks](docs/salary-grounding.md). The reviewer does not enforce or rewrite production answers.
 
 An opt-in [bounded salary calculator](docs/salary-calculator.md) validates supported source formats and performs decimal arithmetic. It is disabled by default and can replay existing evaluation reports offline without model calls.
+
+## Public-hosting preparation
+
+A generic Docker/VPS profile is available in [deploy/README.md](deploy/README.md). It adds Caddy HTTPS, private internal services, disabled open signup, an operator workspace bootstrap, request limits and backup/restore verification scripts. It is separate from the local `rag-updated` project; preparing it does not publish this checkout or move local user data. Supply a real domain and server and complete the documented acceptance checks before launch.
+
+The latest citation/source regression uses real installed Ollama models; see [the recorded evaluation](docs/answer-evaluation.md#installed-model-source-regression). Development fixtures and assistant-reviewed labels do not replace independent domain review.

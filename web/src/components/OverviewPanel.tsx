@@ -1,4 +1,5 @@
-import { Badge, Button, Card, Eyebrow } from '@portfolio/porcelain-azure';
+import { useState } from 'react';
+import { AIMotion, Badge, Button, Card, Eyebrow } from '@portfolio/porcelain-azure';
 import type { DocumentRecord, User } from '../api/types';
 import { Feedback } from './Feedback';
 
@@ -10,6 +11,9 @@ export function OverviewPanel({
   onAsk,
   onMembers,
   onChat,
+  membersCount,
+  onQuickAsk,
+  onUpload,
 }: {
   user: User;
   documents: DocumentRecord[] | null;
@@ -18,15 +22,18 @@ export function OverviewPanel({
   onAsk: () => void;
   onMembers: () => void;
   onChat: (document: DocumentRecord) => void;
+  membersCount: number | null;
+  onQuickAsk: (question: string) => void;
+  onUpload?: () => void;
 }) {
-  const personal = documents?.filter((document) => document.visibility === 'personal');
+  const [quickQuestion, setQuickQuestion] = useState('');
   const recent = [...(documents || [])]
     .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
     .slice(0, 5);
   const displayName = user.name?.trim();
   return (
     <section aria-labelledby="overview-heading" className="space-y-7">
-      <Card className="grid items-center gap-7 p-5 sm:p-8 xl:grid-cols-[minmax(0,1fr)_minmax(340px,1fr)]">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <Eyebrow>Organisation / Overview</Eyebrow>
           <h1
@@ -38,34 +45,89 @@ export function OverviewPanel({
           <p className="mt-3 text-sm leading-6 text-muted">
             Your organisation’s knowledge and personal documents, in one place.
           </p>
-          <div className="mt-5 flex flex-wrap gap-3">
-            <Button onClick={onAsk}>Ask your documents ↗</Button>
-            <Button variant="secondary" onClick={onOpenDocuments}>
-              My documents ↗
-            </Button>
-          </div>
         </div>
-        <Card className="bg-soft/40 p-5 sm:p-6">
-          <Eyebrow>A clear path to a sourced answer</Eyebrow>
-          <ol className="mt-5 grid gap-3 sm:grid-cols-3">
-            {[
-              ['Your question', 'Ask in your own words'],
-              ['Your knowledge', 'Documents shared with you'],
-              ['Relevant sources', 'Open the original documents'],
-            ].map(([title, description], index) => (
-              <li key={title}>
-                <Card className="h-full p-4">
-                  <Badge>{index + 1}</Badge>
-                  <p className="mt-3 text-sm font-semibold">{title}</p>
-                  <p className="mt-2 text-xs leading-5 text-muted">{description}</p>
-                </Card>
-              </li>
-            ))}
-          </ol>
-          <p className="mt-4 text-xs leading-6 text-muted">
-            Find answers in the company knowledge and personal documents shared with you.
+        <div className="flex flex-wrap items-center gap-2.5">
+          {user.role === 'admin' && (
+            <Button variant="secondary" onClick={onMembers}>
+              Add member
+            </Button>
+          )}
+          <Button onClick={user.role === 'admin' && onUpload ? onUpload : onOpenDocuments}>
+            {user.role === 'admin' ? 'Upload documents' : 'My documents'}
+          </Button>
+        </div>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-3">
+        {[
+          ...(user.role === 'admin'
+            ? [['Total members', membersCount, 'Accounts in your organisation']]
+            : []),
+          [
+            user.role === 'admin' ? 'Total documents' : 'Your documents',
+            documents?.length,
+            user.role === 'admin' ? 'Documents in your organisation' : 'Documents you can access',
+          ],
+          [
+            'Failed uploads',
+            documents?.filter((document) => document.index_status === 'failed').length,
+            'Uploads needing attention',
+          ],
+        ].map(([label, value, description]) => (
+          <Card key={String(label)} className="p-5">
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-xs font-semibold text-muted">{label}</p>
+              <span
+                aria-hidden="true"
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-soft text-azure"
+              >
+                {label === 'Total members' ? '♧' : label === 'Failed uploads' ? '!' : '▤'}
+              </span>
+            </div>
+            <p className="mt-3 text-3xl font-bold">{value ?? '—'}</p>
+            <p className="mt-2 text-xs text-muted">{description}</p>
+          </Card>
+        ))}
+      </div>
+      <Card className="bg-soft/40 p-5 sm:p-6">
+        <div className="grid items-center gap-5 lg:grid-cols-[minmax(0,1fr)_170px]">
+          <div>
+            <Eyebrow>Ask Atlas</Eyebrow>
+            <h2 className="mt-2 text-lg font-bold">Ask across your documents</h2>
+            <form
+              className="mt-4 flex flex-wrap gap-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (quickQuestion.trim()) {
+                  onQuickAsk(quickQuestion.trim());
+                  setQuickQuestion('');
+                }
+              }}
+            >
+              <label htmlFor="overview-question" className="sr-only">
+                Your question for Atlas
+              </label>
+              <input
+                id="overview-question"
+                value={quickQuestion}
+                onChange={(event) => setQuickQuestion(event.target.value)}
+                maxLength={2000}
+                placeholder="What would you like to know?"
+                className="min-w-0 flex-1 rounded-lg border border-line bg-canvas px-3 py-2.5 text-sm text-ink"
+              />
+              <Button type="submit" disabled={!quickQuestion.trim()}>
+                Ask question
+              </Button>
+            </form>
+          </div>
+          {documents?.length === 0 && (
+            <AIMotion kind="vectors" decorative className="hidden h-28 lg:block" />
+          )}
+        </div>
+        {documents?.length === 0 && (
+          <p className="mt-3 text-xs text-muted">
+            Upload or receive a document to find answers with sources.
           </p>
-        </Card>
+        )}
       </Card>
       {error && <Feedback error>{error} Open My documents to refresh the list.</Feedback>}
       {!documents && !error && (
@@ -74,8 +136,8 @@ export function OverviewPanel({
         </p>
       )}
 
-      <div className="grid items-start gap-6 xl:grid-cols-2">
-        <Card className="min-w-0 p-5 sm:p-6">
+      <div className="grid items-start gap-6">
+        <Card className="min-w-0 overflow-hidden p-5 sm:p-6">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <div>
               <Eyebrow>Knowledge library</Eyebrow>
@@ -92,6 +154,12 @@ export function OverviewPanel({
                   key={document.id}
                   className="flex flex-wrap items-center justify-between gap-3 py-4"
                 >
+                  <span
+                    aria-hidden="true"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-soft text-azure"
+                  >
+                    ▤
+                  </span>
                   <div className="min-w-0 flex-1">
                     <p className="break-words text-sm font-semibold">{document.title}</p>
                     <p className="mt-1 text-xs text-muted">
@@ -131,8 +199,12 @@ export function OverviewPanel({
                   ? 'Upload a document, choose who can access it, and start asking questions once the upload finishes.'
                   : 'Documents shared with you will appear here. Your administrator can add company knowledge and personal letters.'}
               </p>
-              <Button variant="secondary" className="mt-4" onClick={onOpenDocuments}>
-                {user.role === 'admin' ? 'Add your first document' : 'Open my documents'}
+              <Button
+                variant="secondary"
+                className="mt-4"
+                onClick={user.role === 'admin' && onUpload ? onUpload : onOpenDocuments}
+              >
+                {user.role === 'admin' ? 'Upload documents' : 'Open my documents'}
               </Button>
             </div>
           ) : (
@@ -141,38 +213,6 @@ export function OverviewPanel({
             </p>
           )}
         </Card>
-        <div className="space-y-5">
-          <Card className="p-5 sm:p-6">
-            <Eyebrow>Ask your organisation</Eyebrow>
-            <h2 className="mt-2 text-lg font-bold">Find out more about your workplace.</h2>
-            <div className="mt-5 flex flex-col items-start gap-3">
-              <Button variant="secondary" onClick={onAsk}>
-                Ask a question
-              </Button>
-              <Button variant="ghost" onClick={onOpenDocuments}>
-                {user.role === 'admin' ? 'Manage documents' : 'Browse my documents'}
-              </Button>
-              {user.role === 'admin' && (
-                <Button variant="ghost" onClick={onMembers}>
-                  Manage members
-                </Button>
-              )}
-            </div>
-          </Card>
-          <Card className="bg-soft/40 p-5 sm:p-6">
-            <Eyebrow>Your access</Eyebrow>
-            <h2 className="mt-2 text-lg font-bold">Knowledge shared with you</h2>
-            <p className="mt-3 text-sm leading-6 text-muted">
-              {documents
-                ? `${personal?.length || 0} personal document${personal?.length === 1 ? '' : 's'}, alongside company and restricted knowledge you can access.`
-                : 'Your overview includes only documents available to your account.'}
-            </p>
-            <p className="mt-3 text-xs leading-6 text-muted">
-              Follow the numbered references when reviewing an answer. Open the original documents
-              for the full context.
-            </p>
-          </Card>
-        </div>
       </div>
     </section>
   );

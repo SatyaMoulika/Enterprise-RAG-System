@@ -189,3 +189,39 @@ def test_pdf_cleanup_is_applied_per_page(tmp_path, monkeypatch):
     )
     result = loader.LoaderService.extract_text(tmp_path / "vertical.pdf")
     assert result == "Cover page with normal paragraph layout.\n\n" + sentence
+
+
+def test_short_word_stream_is_repaired_beside_normal_content():
+    sentence = "Your annual leave allowance is twenty working days per year."
+    text = (
+        "EMPLOYEE BENEFITS\n\n"
+        + "\n\n".join(sentence.split())
+        + "\n\n- Manager approval is required."
+    )
+    result = normalize_pdf_text(text)
+    assert sentence in result
+    assert "EMPLOYEE BENEFITS" in result
+    assert "- Manager approval is required." in result
+    assert "\n\n" in result
+
+
+def test_short_single_word_table_without_sentence_punctuation_is_not_reinterpreted():
+    text = "Category\nAmount\nEquipment\n5000\nTravel\n2000\nMeals\n1000"
+    # Ordinary line wrapping may be unfolded; never add words or inferred cells.
+    assert normalize_pdf_text(text).split() == text.split()
+
+
+def test_fitting_paragraphs_are_kept_as_complete_source_units(monkeypatch):
+    from services.loader_service import ExtractedDocument, SourcePage
+
+    monkeypatch.setattr(settings, "CHUNK_SIZE", 180)
+    first = "Employees can work remotely. Manager approval is required."
+    second = "An exception applies to onsite roles. Those employees must attend the office."
+    source = ExtractedDocument([SourcePage(2, first + "\n\n" + second)])
+    chunks = ChunkingService.chunk_document(source)
+    assert first in chunks[0].chunk_text
+    assert second in chunks[0].chunk_text
+    assert all(
+        chunk.chunk_text == source.pages[0].text[chunk.start_offset : chunk.end_offset]
+        for chunk in chunks
+    )

@@ -1,4 +1,4 @@
-# Atlas document workspace
+# Atlas employee knowledge hub
 
 Requires Node.js 22.12+ and npm.
 
@@ -37,6 +37,18 @@ Tests use mocked HTTP responses to exercise the real application components, rol
 - Request failure is distinct from an answer. Upload/delete network failures can leave an uncertain result: inspect the refreshed document list before manually repeating. No mutation is automatically retried.
 - Session expiry returns to sign-in. In-flight requests are aborted on component teardown; browser cancellation does not guarantee cancellation of backend ingestion/inference.
 - Questions currently run independently; the displayed conversation is not sent as model context.
+
+## Product identity
+
+`public/atlas-mark.svg` is the source for the Atlas mark: an azure tile with a geometric white A and a navigation-arrow cutout. `AtlasLogo` pairs it with the existing Manrope wordmark on sign-in and authenticated screens. The organisation name replaces internal workspace IDs in the header, sidebar and Members copy. Page titles identify the current screen and organisation and clear back to the sign-in title after sign-out. The logo button returns to Overview.
+
+The static icon family includes an SVG favicon, a multi-size ICO, a 180px Apple touch icon, and 192px/512px icons referenced by `site.webmanifest`. The manifest supplies branding for compatible browsers; there is no service worker or offline document cache. No new fonts, palette or UI theme were introduced. To regenerate the derived icons after changing the SVG, run this development-only helper with Python and Pillow installed:
+
+```sh
+python3 scripts/generate-icons.py
+```
+
+The generated icons are committed assets and need no Python/Pillow dependency during the frontend build or at runtime.
 
 ## Shared component dependency
 

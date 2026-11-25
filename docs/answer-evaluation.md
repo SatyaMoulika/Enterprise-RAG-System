@@ -179,3 +179,44 @@ docker compose -p rag-updated exec -T api .venv/bin/python scripts/evaluate_answ
 Review against each report's actual excerpts. For each claim, verify the cited marker supports that specific claim, current policies support current amounts, exceptions/limits remain intact, and missing evidence produces partial answers or appropriate refusal. A valid marker number is insufficient. For the leave comparison, the 20-day claim must cite the current policy regardless of its new marker. For receipt/security exceptions and expense comparisons, ensure retrieved evidence is complete before attributing an error to the prompt.
 
 Use the existing review fields and offline summary per report; keep order reports separate. Check all cases for regressions, not just previously failing questions. Production defaults and prompts remain unchanged. Automated tests verify ordering, evidence preservation, marker mapping, repeatability and unchanged ranking metrics, not claim support or model correctness. Promote no candidate automatically; review real outputs first, and evaluate reranking separately afterwards.
+
+## Evaluate original sources through the application
+
+The source runner complements the older pre-chunked ranking experiments. It creates a disposable SQLite database and upload directory, then uses the actual extraction, normalization, chunking, embedding, persistence, access filtering, context selection, salary calculator, citation guard and generation services. It never reads or modifies the live database. The included TXT and PDF fixtures cover section exceptions, retention comparisons, financial evidence spanning pages, private employee access and tables.
+
+```sh
+# From backend; uses the same environment settings as the application.
+.venv/bin/python scripts/evaluate_sources.py --allow-inference > source-review.json
+```
+
+The report records source hashes, extraction warnings, index versions, application settings and pipeline timings. Its reference answers and null review labels are development material, not evidence of measured correctness. Create a separate held-out source manifest using the same `documents`/`queries` format to validate generalization. No automated reviewer labels are silently substituted for human judgment.
+
+After reviewing every answer and substantive claim, aggregate with the explicit completeness gate:
+
+```sh
+.venv/bin/python scripts/evaluate_answers.py --review-file source-review.json --require-reviewed
+```
+
+This fails if any answer/claim remains unreviewed or any pipeline case failed. Ordinary aggregation reports `quality_review_complete` and the count of incomplete rows. Older saved reports remain historical, unreviewed outputs and do not establish correctness.
+
+The live answer path now checks citation marker ranges and uncited paragraphs, sentences, bullets and table rows. Invalid generated citations produce an explicit verification failure instead of serving the unchecked answer. These are structural checks, not semantic faithfulness checks. The experimental salary checker is still an aid for review and is not a production correctness gate.
+
+## Installed-model source regression
+
+Reports in `backend/evaluation/reports/source-model-before.json` and `source-model-after.json` use the installed all-minilm and qwen2.5:3b models with synthetic original PDF/TXT files and a disposable database. The first run exposed a false refusal despite retrieving the remote-work exception. The v7 structured-reference run returned the supported remote-work rule/exception, retention periods, monthly gross amount and equipment allowance, and returned no usable excerpts for the inaccessible salary and missing private-number cases.
+
+The separate 13-query retrieval regression at cosine cutoff 0.3 retained all labelled evidence for its 11 answerable queries and returned empty results for both unanswerable queries (`dense-cutoff-0.3.json`). This small development check supports the current all-minilm default, not a universal threshold or a production quality claim. Recalibrate with representative documents and a held-out dataset when changing model or corpus.
+
+The after-report has explicit **assistant source-inspection labels**, with `independent_human_review: false`. A domain owner still needs to review representative real documents. These labels should not be described as independent human acceptance or generalized 100% accuracy. Recorded source-case durations include model execution on this machine; they are not a concurrent-load SLA.
+
+Evaluation-only `generation_trace` retains the first and revised model answers for diagnosing citation failures. It is not included in the public chat API. Treat reports made from private source files as sensitive documents. Use `--case-ids` to rerun a subset without changing the live database.
+
+## Personal-letter identity regression
+
+`evaluation/sources/personal-cases.json` adds separately assigned Alice/Bob offer letters and Alice's appointment letter. Run it with the actual application pipeline:
+
+```sh
+.venv/bin/python scripts/evaluate_sources.py --allow-inference --dataset evaluation/sources/personal-cases.json
+```
+
+The cases cover natural “my offer/appointment letter” questions, a chat message claiming another person's name, account-profile identity and a salary amount spanning PDF pages. The source report retains explicit account-context origins for replies that do not require document passages. Do not interpret a zero source count for “Who am I?” as a failed identity lookup; that answer comes from the authenticated profile. Independent correctness review remains required for production acceptance.

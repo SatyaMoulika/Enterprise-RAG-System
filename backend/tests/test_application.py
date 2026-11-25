@@ -80,11 +80,11 @@ def test_upload_limit(client, account, db, monkeypatch):
     assert list(settings.UPLOAD_DIR.rglob("*.txt")) == []
 
 
-def test_same_names_use_distinct_storage(client, account, db):
+def test_identical_uploads_reuse_existing_storage(client, account, db):
     assert upload(client, account).status_code == 201
     assert upload(client, account).status_code == 201
     paths = db.scalars(select(Document.file_path)).all()
-    assert len(set(paths)) == 2
+    assert len(paths) == 1
 
 
 def test_embedding_failure_rolls_back_and_cleans_file(client, account, db, monkeypatch):
@@ -175,12 +175,13 @@ def test_wrong_embedding_model_is_not_mixed(client, account, db):
     assert RetrievalService.retrieve("test", owner.enterprise_id, db) == []
 
 
-def test_capacity_limit_is_explicit(client, account, monkeypatch):
+def test_retrieval_streams_beyond_former_capacity_limit(client, account, monkeypatch):
     upload(client, account)
-    upload(client, account)
+    upload(client, account, name="second.txt", content=b"The second office opens at ten.")
     monkeypatch.setattr(settings, "MAX_RETRIEVAL_CHUNKS", 1)
+    monkeypatch.setattr(LLMService, "generate", lambda **kwargs: "The office opens at nine [1].")
     response = client.post("/chat/generate", headers=account, json={"question": "test"})
-    assert response.status_code == 503
+    assert response.status_code == 200
 
 
 def test_employee_cannot_upload_or_delete(client, account):
@@ -248,3 +249,24 @@ def test_upload_limits_are_authenticated_and_follow_configuration(client, accoun
     response = client.get("/documents/limits", headers=account)
     assert response.status_code == 200
     assert response.json() == {"allowed_extensions": [".pdf", ".txt"], "max_upload_bytes": 12345}
+
+
+def test_public_signup_can_be_disabled_without_disabling_login(client, account, db, monkeypatch):
+    monkeypatch.setattr(settings, "PUBLIC_REGISTRATION_ENABLED", False)
+    assert client.get("/auth/config").json()["registration_enabled"] is False
+    response = client.post(
+        "/auth/register",
+        json={
+            "enterprise_name": "Untrusted signup",
+            "email": "public@example.com",
+            "password": "test password 123",
+        },
+    )
+    assert response.status_code == 403
+    assert db.query(Enterprise).count() == 1
+    assert (
+        client.post(
+            "/auth/login", json={"email": "owner@example.com", "password": "test password 123"}
+        ).status_code
+        == 200
+    )

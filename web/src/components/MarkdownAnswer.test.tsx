@@ -54,3 +54,33 @@ describe('answer Markdown', () => {
     expect(screen.getByText(/supporting evidence \[1\]/)).toBeInTheDocument();
   });
 });
+
+it('turns valid answer markers into source buttons without modifying code or external links', async () => {
+  const { vi } = await import('vitest');
+  const user = (await import('@testing-library/user-event')).default.setup();
+  const onCitation = vi.fn();
+  render(
+    <MarkdownAnswer
+      citations={[
+        {
+          marker: 2,
+          document_id: 1,
+          title: 'policy.pdf',
+          chunk_index: 7,
+          excerpt: 'Original evidence.',
+        },
+      ]}
+      onCitation={onCitation}
+    >
+      {'Supported claim [2]. Missing marker [9]. Code `[2]`. [Reference](https://example.com).'}
+    </MarkdownAnswer>,
+  );
+  await user.click(screen.getByRole('button', { name: 'View source 2: policy.pdf' }));
+  expect(onCitation).toHaveBeenCalledWith(2);
+  expect(screen.getAllByRole('button')).toHaveLength(1);
+  expect(screen.getByRole('link', { name: 'Reference' })).toHaveAttribute(
+    'href',
+    'https://example.com',
+  );
+  expect(document.querySelector('code')).toHaveTextContent('[2]');
+});
