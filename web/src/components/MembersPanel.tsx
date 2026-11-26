@@ -125,13 +125,14 @@ export function MembersPanel({
   );
   return (
     <section aria-labelledby="members-heading">
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
           <Eyebrow>Members / Organisation access</Eyebrow>
           <h1 id="members-heading" className="mt-2 text-3xl font-bold tracking-tight">
-            Your workspace team.
+            Your workspace{' '}
+            <span className="font-editorial font-medium italic text-azure">team.</span>
           </h1>
-          <p className="mt-2 text-xs text-muted">
+          <p className="mt-3 text-sm text-muted">
             Manage sign-in accounts in {currentUser.enterprise_name?.trim() || 'your organisation'}.
           </p>
         </div>
@@ -153,7 +154,7 @@ export function MembersPanel({
         )}
         {notice && <Feedback>{notice}</Feedback>}
       </div>
-      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)]">
         <div className="min-w-0">
           <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
             <div>
@@ -198,7 +199,7 @@ export function MembersPanel({
                           {member.name || member.email}
                         </h3>
                         {member.name && <span className="text-xs text-muted">{member.email}</span>}
-                        {member.id === currentUser.id && <Badge>You</Badge>}
+                        {member.id === currentUser.id && <Badge className="access-chip">You</Badge>}
                       </div>
                       <p className="mt-2 text-[11px] text-muted">
                         Added {new Date(member.created_at).toLocaleDateString()}
@@ -214,12 +215,15 @@ export function MembersPanel({
                     >
                       Edit details
                     </Button>
-                    <Badge>{member.role === 'admin' ? 'Administrator' : 'Member'}</Badge>
-                    <Badge tone={member.is_active ? 'teal' : 'violet'}>
+                    <Badge className="access-chip">
+                      {member.role === 'admin' ? 'Administrator' : 'Member'}
+                    </Badge>
+                    <Badge className="access-chip" tone={member.is_active ? 'teal' : 'violet'}>
                       {member.is_active ? 'Active' : 'Inactive'}
                     </Badge>
                     <Button
                       variant="ghost"
+                      className={member.id === currentUser.id ? '' : 'member-remove'}
                       aria-label={`Remove ${member.email}`}
                       title={
                         member.id === currentUser.id
@@ -313,7 +317,7 @@ export function MembersPanel({
           )}
 
           <div hidden={!!editing}>
-            <Card className="mb-6 bg-soft/35 p-5">
+            <Card className="mb-6 p-6">
               <h2 className="text-lg font-bold">Add a member</h2>
               <p className="mb-5 mt-2 text-xs leading-6 text-muted">
                 Creates an account immediately. Members can read documents and ask questions;
@@ -335,6 +339,7 @@ export function MembersPanel({
                     name="email"
                     type="email"
                     required
+                    placeholder="colleague@example.com"
                     autoComplete="off"
                     disabled={busy || removing || uncertain}
                   />
@@ -344,13 +349,14 @@ export function MembersPanel({
                     required
                     minLength={8}
                     maxLength={128}
+                    placeholder="Minimum 8 characters"
                     autoComplete="new-password"
                     hint="8–128 characters. This field clears after every submission."
                     disabled={busy || removing || uncertain}
                   />
                 </div>
-                <div className="flex flex-wrap items-end gap-4">
-                  <div className="min-w-48 flex-1">
+                <div className="space-y-4">
+                  <div>
                     <SelectField
                       label="Account role"
                       name="role"
@@ -361,29 +367,18 @@ export function MembersPanel({
                       <option value="admin">Administrator</option>
                     </SelectField>
                   </div>
-                  <Button type="submit" loading={busy} disabled={removing || uncertain}>
-                    {busy ? 'Creating account…' : 'Add member ↗'}
+                  <Button
+                    className="w-full"
+                    type="submit"
+                    loading={busy}
+                    disabled={removing || uncertain}
+                  >
+                    {busy ? 'Creating account…' : 'Create member account ↗'}
                   </Button>
                 </div>
               </form>
             </Card>
           </div>
-          <Card className="p-5">
-            <Eyebrow>Access levels</Eyebrow>
-            <h2 className="mt-2 text-lg font-bold">Who can see each document?</h2>
-            <div className="mt-4 space-y-4">
-              {[
-                ['Company-wide', 'Every member of this workspace'],
-                ['Personal', 'The assigned employee and administrators'],
-                ['Restricted', 'Selected members and administrators'],
-              ].map(([label, description]) => (
-                <div key={label} className="space-y-2">
-                  <Badge>{label}</Badge>
-                  <p className="text-xs leading-6 text-muted">{description}</p>
-                </div>
-              ))}
-            </div>
-          </Card>
         </aside>
       </div>
       {selected && (

@@ -96,7 +96,7 @@ export function SourceDocuments({
         tabIndex={-1}
         aria-label={`Source document: ${document.title}`}
         data-source-document={document.id}
-        className={`rounded-xl border bg-surface p-4 focus-visible:outline-2 focus-visible:outline-azure ${selected ? 'border-azure/40' : 'border-line'}`}
+        className={`rounded-xl border bg-soft/30 p-4 focus-visible:outline-2 focus-visible:outline-azure ${selected ? 'border-azure/40' : 'border-line'}`}
       >
         <div className="flex items-start gap-3">
           <span
@@ -107,22 +107,30 @@ export function SourceDocuments({
           </span>
           <div className="min-w-0 flex-1">
             <h3 className="break-words text-sm font-semibold">{document.title}</h3>
-            {pages && <p className="mt-1 text-xs text-muted">{pages}</p>}
             <p className="mt-1 text-xs leading-5 text-muted">
-              {citedReferences.length
-                ? `Reference${citedReferences.length === 1 ? '' : 's'} ${citedReferences.map((reference) => `[${reference.marker}]`).join(', ')}`
-                : 'Retrieved document'}
+              {pages && (
+                <>
+                  <span>{pages}</span> ·{' '}
+                </>
+              )}
+              <span>
+                {citedReferences.length
+                  ? `Reference${citedReferences.length === 1 ? '' : 's'} ${citedReferences.map((reference) => `[${reference.marker}]`).join(', ')}`
+                  : 'Retrieved document'}
+              </span>
             </p>
+            <Button
+              variant="ghost"
+              className="mt-3"
+              aria-label={`View document: ${document.title}`}
+              onClick={() => onOpenSource(source)}
+            >
+              {selected?.page_start
+                ? `View document · page ${selected.page_start}`
+                : 'View document ↗'}
+            </Button>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          className="mt-3"
-          aria-label={`View document: ${document.title}`}
-          onClick={() => onOpenSource(source)}
-        >
-          {selected?.page_start ? `View document · page ${selected.page_start}` : 'View document'}
-        </Button>
       </article>
     );
   }

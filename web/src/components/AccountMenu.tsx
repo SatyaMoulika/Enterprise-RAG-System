@@ -102,12 +102,36 @@ export function AccountMenu({
               key={value}
               type="button"
               role="menuitem"
-              className="block w-full rounded-lg px-3 py-2.5 text-left text-xs font-semibold text-ink hover:bg-soft focus-visible:outline-2 focus-visible:outline-azure"
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-xs font-semibold text-ink hover:bg-soft focus-visible:outline-2 focus-visible:outline-azure"
               onClick={() => {
                 setOpen(false);
                 setModal(value);
               }}
             >
+              <svg
+                aria-hidden="true"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className={value === 'account' ? 'text-azure' : 'text-muted'}
+              >
+                {value === 'account' ? (
+                  <>
+                    <circle cx="12" cy="7" r="3.5" />
+                    <path d="M5 21v-2a7 7 0 0 1 14 0v2" />
+                  </>
+                ) : (
+                  <>
+                    <path d="M10 17l5-5-5-5M15 12H4" />
+                    <path d="M12 4h5a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5" />
+                  </>
+                )}
+              </svg>
               {label}
             </button>
           ))}

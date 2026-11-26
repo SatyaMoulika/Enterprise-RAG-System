@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Badge, Eyebrow, Sidebar, ThemeProvider } from '@portfolio/porcelain-azure';
+import { Badge, Eyebrow, ThemeProvider } from '@portfolio/porcelain-azure';
 import { ApiClient } from './api/client';
 import type { DocumentRecord, User } from './api/types';
 import { AuthScreen } from './components/AuthScreen';
@@ -9,6 +9,7 @@ import { MembersPanel } from './components/MembersPanel';
 import { OverviewPanel } from './components/OverviewPanel';
 import { AccountMenu } from './components/AccountMenu';
 import { AtlasLogo } from './components/AtlasLogo';
+import { NavigationIcon } from './components/NavigationIcon';
 interface Session {
   token: string;
   user: User;
@@ -55,11 +56,11 @@ function Workspace({ session, onSignOut }: { session: Session; onSignOut: () => 
     document.title = `${page} · ${organisationName} | Atlas`;
   }, [view, organisationName]);
   return (
-    <div className="flex min-h-dvh w-full flex-col px-3 py-3 sm:px-5 lg:px-6">
+    <div className="flex min-h-dvh w-full flex-col">
       <a href="#workspace-main" className="sr-only focus:not-sr-only focus:block focus:p-3">
         Skip to workspace
       </a>
-      <header className="mb-5 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-line bg-surface px-5 py-4">
+      <header className="sticky top-0 z-20 flex min-h-16 flex-wrap items-center justify-between gap-4 border-b border-line bg-surface px-5 py-3 sm:px-6">
         <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
           <button
             type="button"
@@ -72,31 +73,49 @@ function Workspace({ session, onSignOut }: { session: Session; onSignOut: () => 
         </div>
         <AccountMenu user={profile} api={api} onUpdated={setProfile} onSignOut={onSignOut} />
       </header>
-      <div className="flex-1 overflow-hidden rounded-xl border border-line bg-surface md:grid md:grid-cols-[220px_minmax(0,1fr)]">
-        <aside aria-label="Organisation navigation" className="bg-soft/45">
+      <div className="flex-1 md:grid md:grid-cols-[240px_minmax(0,1fr)]">
+        <aside aria-label="Organisation navigation" className="border-r border-line bg-[#F2F7FD]">
           <div className="hidden border-b border-line p-5 md:block">
             <Eyebrow className="break-words">{organisationName}</Eyebrow>
             <div className="mt-3">
               <Badge>{session.user.role === 'admin' ? 'Administrator' : 'Employee'}</Badge>
             </div>
           </div>
-          <Sidebar
-            items={[
-              { id: 'overview', label: 'Overview', icon: '◈' },
-              { id: 'chat', label: 'Ask documents', icon: '✧' },
-              { id: 'documents', label: 'My documents', icon: '▤' },
+          <nav
+            aria-label="Workspace navigation"
+            className="flex gap-1 overflow-auto px-3 py-4 md:block md:space-y-1"
+          >
+            {[
+              { id: 'overview', label: 'Overview', icon: <NavigationIcon name="overview" /> },
+              { id: 'chat', label: 'Ask documents', icon: <NavigationIcon name="chat" /> },
+              { id: 'documents', label: 'My documents', icon: <NavigationIcon name="documents" /> },
               ...(session.user.role === 'admin'
-                ? [{ id: 'members', label: 'Members', icon: '♧' }]
+                ? [{ id: 'members', label: 'Members', icon: <NavigationIcon name="members" /> }]
                 : []),
-            ]}
-            active={view}
-            onChange={(next) => {
-              setView(next);
-              if (next === 'documents') membersChanged();
-            }}
-          />
+            ].map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                aria-current={view === item.id ? 'page' : undefined}
+                onClick={() => {
+                  setView(item.id);
+                  if (item.id === 'documents') membersChanged();
+                }}
+                className={`flex shrink-0 items-center gap-3 whitespace-nowrap rounded-xl border px-3.5 py-3 text-sm transition md:w-full ${view === item.id ? 'border-line bg-surface font-bold text-azure' : 'border-transparent font-semibold text-muted hover:bg-surface/60'}`}
+              >
+                {item.icon}
+                {item.label}
+              </button>
+            ))}
+          </nav>
+          {profile.name?.trim() && (
+            <div className="mx-3 mt-4 hidden rounded-xl border border-line bg-surface p-4 text-xs md:block">
+              <p className="font-bold">Signed in as</p>
+              <p className="mt-1 break-words text-muted">{profile.name}</p>
+            </div>
+          )}
         </aside>
-        <main id="workspace-main" className="min-w-0 p-5 sm:p-8">
+        <main id="workspace-main" className="min-w-0 bg-[#F6FAFE] p-5 sm:p-8 lg:p-10">
           {view === 'overview' && (
             <OverviewPanel
               user={profile}

@@ -16,6 +16,23 @@
 body {
   margin: 0;
 }
+.font-semibold {
+  font-weight: 700;
+}
+.font-bold,
+strong,
+b {
+  font-weight: 800;
+}
+.font-extrabold {
+  font-weight: 900;
+}
+.access-chip {
+  border-radius: 9999px;
+}
+.member-remove {
+  color: #c53131;
+}
 button,
 a,
 textarea,
@@ -39,9 +56,29 @@ dialog::backdrop {
   background: #d5e9fa;
   color: #243447;
 }
+.overview-flow {
+  animation: overview-flow 6s linear infinite;
+}
+.overview-pulse {
+  animation: overview-pulse 3s ease-in-out infinite;
+}
+@keyframes overview-flow {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+@keyframes overview-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
+  }
+  .overview-flow,
+  .overview-pulse {
+    animation: none;
   }
 }
 
@@ -172,4 +209,13 @@ dialog::backdrop {
 .password-input::-ms-reveal,
 .password-input::-ms-clear {
   display: none;
+}
+
+.auth-intro {
+  background: radial-gradient(
+    circle at 12% 10%,
+    var(--pa-soft) 0%,
+    #f6fafe 48%,
+    var(--pa-canvas) 100%
+  );
 }

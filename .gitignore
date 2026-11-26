@@ -13,3 +13,11 @@ node_modules/
 dist/
 
 /backups/
+
+# Local tests, deployment materials and documentation
+/backend/tests/
+/web/src/test/
+*.test.*
+*.spec.*
+/deploy/
+/docs/

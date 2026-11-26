@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { AIMotion, Button, Card, Eyebrow, InputField } from '@portfolio/porcelain-azure';
+import { Button, Card, Eyebrow, InputField } from '@portfolio/porcelain-azure';
 import { ApiClient, errorMessage, isCancelled } from '../api/client';
 import type { User } from '../api/types';
 import { Feedback } from './Feedback';
@@ -98,25 +98,127 @@ export function AuthScreen({
     }
   }
   return (
-    <main className="flex min-h-dvh w-full flex-col px-5 py-6 sm:px-10 lg:px-16">
-      <header className="flex items-center justify-between">
-        <AtlasLogo />
-      </header>
-      <div className="grid flex-1 items-center gap-10 py-12 md:grid-cols-2 md:py-20 lg:gap-20">
-        <section>
-          <Eyebrow>Your documents / A clearer perspective</Eyebrow>
-          <h1 className="my-5 text-5xl font-extrabold leading-[1.12] tracking-[-.05em]">
-            Find the answer.
+    <main className="grid min-h-dvh w-full lg:grid-cols-2">
+      <section className="auth-intro flex min-h-[440px] flex-col justify-between border-b border-line p-7 sm:p-12 lg:min-h-dvh lg:border-b-0 lg:border-r lg:p-14">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <AtlasLogo />
+            <span className="font-editorial text-xs italic text-muted">knowledge</span>
+          </div>
+        </div>
+        <div className="my-10 max-w-lg lg:my-0">
+          <Eyebrow className="text-azure">Question · Context · Understanding</Eyebrow>
+          <h1 className="mt-4 text-[32px] font-extrabold leading-[1.12] tracking-tight sm:text-[40px]">
+            Your organisation’s
             <br />
-            <span className="font-editorial font-medium italic text-azure">See the source.</span>
+            knowledge,{' '}
+            <span className="font-editorial font-medium italic text-azure">together.</span>
           </h1>
-          <p className="max-w-md text-sm leading-7 text-muted">
-            Bring your organisation’s documents together. Ask a question and check the answer
-            against the original sources.
+          <p className="mt-4 text-sm leading-7 text-muted">
+            Atlas connects personal offer letters, company handbooks and restricted policies in one
+            workspace, so you can check answers against their sources.
           </p>
-          <AIMotion kind="embeddings" className="mt-4 h-52 max-w-sm" />
-        </section>
-        <Card className="p-6 sm:p-8">
+          <div className="mt-9" aria-hidden="true">
+            <svg viewBox="0 0 510 155" className="w-full max-w-lg" fill="none">
+              <path
+                d="M120 80 C165 80 165 55 210 55 M310 55 C350 55 350 80 390 80"
+                stroke="var(--pa-azure)"
+                strokeOpacity=".45"
+                strokeWidth="2"
+                strokeDasharray="5 6"
+              />
+              <circle cx="170" cy="67" r="5" fill="var(--pa-teal)" />
+              <circle cx="350" cy="67" r="5" fill="var(--pa-teal)" />
+              <rect
+                x="10"
+                y="8"
+                width="130"
+                height="136"
+                rx="16"
+                fill="var(--pa-surface)"
+                stroke="var(--pa-line)"
+              />
+              <rect x="26" y="24" width="28" height="28" rx="8" fill="var(--pa-soft)" />
+              <path
+                d="M34 33h12m-12 5h12m-12 5h8"
+                stroke="var(--pa-azure)"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+              <path
+                d="M28 69h94M28 81h76M28 93h84"
+                stroke="var(--pa-line)"
+                strokeWidth="5"
+                strokeLinecap="round"
+              />
+              <rect x="28" y="114" width="58" height="12" rx="6" fill="var(--pa-soft)" />
+              <rect
+                x="202"
+                y="26"
+                width="116"
+                height="86"
+                rx="15"
+                fill="var(--pa-surface)"
+                stroke="var(--pa-line)"
+              />
+              <circle cx="220" cy="45" r="5" fill="var(--pa-violet)" />
+              <path
+                d="M234 45h46M220 65h79M220 77h58M220 89h40"
+                stroke="var(--pa-line)"
+                strokeWidth="5"
+                strokeLinecap="round"
+              />
+              <rect
+                x="380"
+                y="8"
+                width="118"
+                height="136"
+                rx="16"
+                fill="var(--pa-surface)"
+                stroke="var(--pa-line)"
+              />
+              <circle cx="398" cy="28" r="9" fill="var(--pa-soft)" />
+              <path d="M398 23v10m-5-5h10" stroke="var(--pa-azure)" strokeWidth="2" />
+              <path
+                d="M419 28h54M396 54h80M396 66h64"
+                stroke="var(--pa-line)"
+                strokeWidth="5"
+                strokeLinecap="round"
+              />
+              <rect
+                x="394"
+                y="91"
+                width="88"
+                height="36"
+                rx="10"
+                fill="var(--pa-soft)"
+                stroke="var(--pa-line)"
+              />
+              <path
+                d="M406 103h57M406 114h41"
+                stroke="var(--pa-line)"
+                strokeWidth="4"
+                strokeLinecap="round"
+              />
+            </svg>
+            <div className="mt-3 flex justify-between text-xs text-muted">
+              <span>Documents → Evidence → Answers</span>
+              <span className="font-editorial italic">conceptual flow</span>
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted">
+          <span>◇ &nbsp;Role-scoped document access</span>
+          <span>♧ &nbsp;Verify answers against original sources</span>
+        </div>
+      </section>
+      <section
+        className="flex items-center justify-center bg-soft/35 p-6 sm:p-10 lg:p-14"
+        aria-label="Account access"
+      >
+        <Card
+          className={`w-full ${mode === 'register' ? 'max-w-[620px]' : 'max-w-[460px]'} p-7 shadow-xl sm:p-9`}
+        >
           {mode === 'reset' ? (
             <ResetPasswordPanel
               directResetEnabled={directResetEnabled}
@@ -128,7 +230,10 @@ export function AuthScreen({
             />
           ) : (
             <>
-              <div className="mb-7 flex gap-2" aria-label="Account action">
+              <div
+                className="mb-7 inline-flex gap-1 rounded-xl border border-line bg-soft p-1"
+                aria-label="Account action"
+              >
                 <Button
                   variant={mode === 'login' ? 'primary' : 'ghost'}
                   aria-pressed={mode === 'login'}
@@ -155,12 +260,12 @@ export function AuthScreen({
                 )}
               </div>
               <h2 className="text-2xl font-bold tracking-tight">
-                {mode === 'login' ? 'Welcome back.' : 'Make room for your knowledge.'}
+                {mode === 'login' ? 'Welcome back' : 'Create your workspace'}
               </h2>
-              <p className="mb-6 mt-2 text-xs text-muted">
+              <p className="mb-6 mt-2 text-sm leading-6 text-muted">
                 {mode === 'login'
-                  ? 'Sign in to your workspace to continue.'
-                  : 'Register your organisation and create your administrator account. Employees receive accounts from their organisation administrator.'}
+                  ? 'Sign in to your organisation on Atlas.'
+                  : 'Register your organisation and create your administrator account.'}
               </p>
               {notice && (
                 <div className="mb-4">
@@ -170,18 +275,20 @@ export function AuthScreen({
               <form
                 onSubmit={submit}
                 aria-label={mode === 'login' ? 'Sign in form' : 'Create workspace form'}
-                className="space-y-5"
+                className={mode === 'register' ? 'space-y-4' : 'space-y-5'}
               >
                 {mode === 'register' && (
-                  <>
-                    <InputField
-                      label="Organisation name"
-                      name="workspace"
-                      required
-                      maxLength={255}
-                      autoComplete="organization"
-                      disabled={busy}
-                    />
+                  <InputField
+                    label="Organisation name"
+                    name="workspace"
+                    required
+                    maxLength={255}
+                    autoComplete="organization"
+                    disabled={busy}
+                  />
+                )}
+                <div className={mode === 'register' ? 'grid gap-4 sm:grid-cols-2' : ''}>
+                  {mode === 'register' && (
                     <InputField
                       label="Your full name"
                       name="name"
@@ -190,77 +297,80 @@ export function AuthScreen({
                       autoComplete="name"
                       disabled={busy}
                     />
-                    <label className="flex items-start gap-3 text-xs leading-6 text-ink">
-                      <input
-                        type="checkbox"
-                        name="is_admin"
-                        required
-                        disabled={busy}
-                        className="mt-1 h-4 w-4 shrink-0 accent-azure"
-                      />
-                      I am registering as this organisation’s administrator.
-                    </label>
-                  </>
-                )}
-                <InputField
-                  label="Email"
-                  name="email"
-                  type="email"
-                  required
-                  autoComplete="email"
-                  disabled={busy}
-                />
-                <PasswordField
-                  key={mode}
-                  label="Password"
-                  name="password"
-                  required
-                  minLength={mode === 'register' ? 8 : 1}
-                  maxLength={128}
-                  autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
-                  hint={mode === 'register' ? 'At least 8 characters.' : undefined}
-                  disabled={busy}
-                />
-                {mode === 'register' && (
-                  <PasswordField
-                    label="Confirm password"
-                    name="confirmation"
+                  )}
+                  <InputField
+                    label="Email"
+                    name="email"
+                    type="email"
                     required
-                    minLength={8}
-                    maxLength={128}
-                    autoComplete="new-password"
+                    autoComplete="email"
                     disabled={busy}
                   />
+                </div>
+                {mode === 'register' && (
+                  <label className="flex items-start gap-3 text-xs leading-6 text-ink">
+                    <input
+                      type="checkbox"
+                      name="is_admin"
+                      required
+                      disabled={busy}
+                      className="mt-1 h-4 w-4 shrink-0 accent-azure"
+                    />
+                    I am registering as this organisation’s administrator.
+                  </label>
+                )}
+                <div className={mode === 'register' ? 'grid gap-4 sm:grid-cols-2' : ''}>
+                  <PasswordField
+                    key={mode}
+                    label="Password"
+                    name="password"
+                    required
+                    minLength={mode === 'register' ? 8 : 1}
+                    maxLength={128}
+                    autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
+                    hint={mode === 'register' ? 'At least 8 characters.' : undefined}
+                    disabled={busy}
+                  />
+                  {mode === 'register' && (
+                    <PasswordField
+                      label="Confirm password"
+                      name="confirmation"
+                      required
+                      minLength={8}
+                      maxLength={128}
+                      autoComplete="new-password"
+                      disabled={busy}
+                    />
+                  )}
+                </div>
+                {mode === 'login' && (
+                  <a
+                    href="/reset-password"
+                    className="block text-right text-xs font-semibold text-azure"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      if (busy) return;
+                      window.history.pushState(null, '', '/reset-password');
+                      setMode('reset');
+                      setError('');
+                    }}
+                  >
+                    Forgot password?
+                  </a>
                 )}
                 {error && <Feedback error>{error}</Feedback>}
-                <Button type="submit" loading={busy} className="w-full">
+                <Button type="submit" loading={busy} className="w-full py-3 text-sm shadow-sm">
                   {busy
                     ? 'Connecting…'
                     : mode === 'login'
-                      ? 'Continue to workspace ↗'
-                      : 'Create my workspace ↗'}
+                      ? 'Sign in to Atlas →'
+                      : 'Create workspace →'}
                 </Button>
               </form>
-              <a
-                href="/reset-password"
-                className="mt-4 inline-block text-xs font-semibold text-azure"
-                onClick={(event) => {
-                  event.preventDefault();
-                  if (busy) return;
-                  window.history.pushState(null, '', '/reset-password');
-                  setMode('reset');
-                  setError('');
-                }}
-              >
-                Forgot password?
-              </a>
-              <p className="mt-5 text-[11px] leading-5 text-muted">
-                Your session stays in this tab. Refreshing the page signs you out.
-              </p>
             </>
           )}
         </Card>
-      </div>
+      </section>
     </main>
   );
 }

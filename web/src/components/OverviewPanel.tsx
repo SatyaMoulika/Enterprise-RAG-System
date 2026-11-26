@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { AIMotion, Badge, Button, Card, Eyebrow } from '@portfolio/porcelain-azure';
+import { Badge, Button, Card, Eyebrow } from '@portfolio/porcelain-azure';
 import type { DocumentRecord, User } from '../api/types';
 import { Feedback } from './Feedback';
+import { PipelineIllustration } from './PipelineIllustration';
 
 export function OverviewPanel({
   user,
@@ -32,15 +33,22 @@ export function OverviewPanel({
     .slice(0, 5);
   const displayName = user.name?.trim();
   return (
-    <section aria-labelledby="overview-heading" className="space-y-7">
+    <section aria-labelledby="overview-heading" className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <Eyebrow>Organisation / Overview</Eyebrow>
           <h1
             id="overview-heading"
-            className="mt-2 break-words text-3xl font-bold tracking-tight sm:text-4xl"
+            className="mt-1.5 break-words text-[26px] font-extrabold tracking-tight sm:text-[32px]"
           >
-            {displayName ? `Welcome back, ${displayName}.` : 'Welcome back.'}
+            {displayName ? (
+              <>
+                Welcome back,{' '}
+                <span className="font-editorial font-medium italic text-azure">{displayName}.</span>
+              </>
+            ) : (
+              'Welcome back.'
+            )}
           </h1>
           <p className="mt-3 text-sm leading-6 text-muted">
             Your organisation’s knowledge and personal documents, in one place.
@@ -89,12 +97,13 @@ export function OverviewPanel({
         ))}
       </div>
       <Card className="bg-soft/40 p-5 sm:p-6">
-        <div className="grid items-center gap-5 lg:grid-cols-[minmax(0,1fr)_170px]">
+        <div className="grid items-center gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
           <div>
-            <Eyebrow>Ask Atlas</Eyebrow>
-            <h2 className="mt-2 text-lg font-bold">Ask across your documents</h2>
+            <h2 className="text-sm font-bold">
+              ✧&nbsp; Ask across personal &amp; company documents
+            </h2>
             <form
-              className="mt-4 flex flex-wrap gap-3"
+              className="mt-4 flex items-center gap-2 rounded-xl border border-line bg-surface p-1.5 pl-4"
               onSubmit={(event) => {
                 event.preventDefault();
                 if (quickQuestion.trim()) {
@@ -111,17 +120,15 @@ export function OverviewPanel({
                 value={quickQuestion}
                 onChange={(event) => setQuickQuestion(event.target.value)}
                 maxLength={2000}
-                placeholder="What would you like to know?"
-                className="min-w-0 flex-1 rounded-lg border border-line bg-canvas px-3 py-2.5 text-sm text-ink"
+                placeholder="Ask about your offer letter, employee handbook, or access controls..."
+                className="min-w-0 h-10 flex-1 bg-transparent text-sm text-ink placeholder:text-muted focus:outline-none"
               />
               <Button type="submit" disabled={!quickQuestion.trim()}>
                 Ask question
               </Button>
             </form>
           </div>
-          {documents?.length === 0 && (
-            <AIMotion kind="vectors" decorative className="hidden h-28 lg:block" />
-          )}
+          <PipelineIllustration />
         </div>
         {documents?.length === 0 && (
           <p className="mt-3 text-xs text-muted">
@@ -192,7 +199,7 @@ export function OverviewPanel({
               ))}
             </ul>
           ) : documents ? (
-            <div className="rounded-lg border border-dashed border-line bg-soft/35 p-7">
+            <div className="rounded-lg border border-dashed border-line bg-soft/35 px-7 py-12 text-center">
               <h3 className="font-semibold">Start your knowledge library.</h3>
               <p className="mt-2 text-sm leading-6 text-muted">
                 {user.role === 'admin'

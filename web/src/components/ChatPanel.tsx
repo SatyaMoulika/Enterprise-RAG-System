@@ -82,13 +82,14 @@ export function ChatPanel({
     [...turns].reverse().find((turn) => turn.result);
   return (
     <section aria-labelledby="chat-heading">
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
           <Eyebrow>Question / Context / Understanding</Eyebrow>
           <h1 id="chat-heading" className="mt-2 text-3xl font-bold tracking-tight">
-            Ask your documents.
+            Ask your{' '}
+            <span className="font-editorial font-medium italic text-azure">documents.</span>
           </h1>
-          <p className="mt-2 text-xs text-muted">
+          <p className="mt-3 text-sm text-muted">
             {document
               ? `Searching only: ${document.title}`
               : 'Ask about your personal documents and company knowledge you can access.'}
@@ -126,21 +127,46 @@ export function ChatPanel({
           onClose={() => setSourcePreview(null)}
         />
       )}
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_315px]">
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
         <div className="min-w-0">
           {!turns.length ? (
-            <Card className="mb-6 grid items-center gap-3 bg-soft/40 p-6 sm:grid-cols-[1fr_170px]">
-              <div>
-                <h2 className="text-lg font-bold">Start with a question.</h2>
-                <p className="mb-4 mt-2 max-w-md text-xs leading-6 text-muted">
-                  Ask about your offer letter, appointment details, company policies or products.
-                  Open the source documents to verify an answer.
-                </p>
-                <Button variant="secondary" onClick={onOpenDocuments}>
-                  Open documents ↗
-                </Button>
+            <Card className="mb-5 p-6 sm:p-7">
+              <div className="grid items-center gap-3 sm:grid-cols-[1fr_150px]">
+                <div>
+                  <h2 className="text-lg font-bold">Start with a question.</h2>
+                  <p className="mb-4 mt-3 max-w-md text-sm leading-6 text-muted">
+                    Ask about your offer letter, appointment details, company policies or products.
+                    Open the source documents to verify an answer.
+                  </p>
+                  <Button variant="secondary" onClick={onOpenDocuments}>
+                    Open documents ↗
+                  </Button>
+                </div>
+                <AIMotion kind="vectors" decorative className="hidden h-36 sm:block" />
               </div>
-              <AIMotion kind="vectors" className="hidden h-36 sm:block" />
+              <div className="mt-6 border-t border-line/50 pt-4">
+                <p className="text-xs font-semibold uppercase text-muted">Suggested questions</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {[
+                    'What is the salary offered to me?',
+                    'How many PTO days are included in the employee handbook?',
+                    'Who has access to restricted security documents?',
+                  ].map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      type="button"
+                      className="rounded-xl border border-line bg-soft/50 px-3 py-2 text-left text-xs hover:bg-soft"
+                      onClick={() => {
+                        setQuestion(suggestion);
+                        setValidation('');
+                        input.current?.focus();
+                      }}
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </Card>
           ) : (
             <div
@@ -152,11 +178,11 @@ export function ChatPanel({
             >
               {turns.map((turn) => (
                 <article key={turn.id} className="space-y-3">
-                  <div className="ml-auto max-w-[90%] rounded-xl bg-soft p-4">
+                  <div className="ml-auto max-w-[86%] rounded-2xl border border-line/60 bg-soft p-5">
                     <Eyebrow>Your question</Eyebrow>
                     <p className="mt-2 whitespace-pre-wrap text-sm">{turn.question}</p>
                   </div>
-                  <Card className="p-5">
+                  <Card className="p-6">
                     <Eyebrow>Document answer</Eyebrow>
                     {turn.result ? (
                       <>
@@ -181,7 +207,7 @@ export function ChatPanel({
               ))}
             </div>
           )}
-          <form onSubmit={ask} className="rounded-xl border border-line bg-surface p-4">
+          <form onSubmit={ask} className="rounded-xl border border-line bg-surface p-6">
             <label htmlFor="question" className="mb-2 block text-xs font-semibold">
               Your question
             </label>
@@ -205,14 +231,14 @@ export function ChatPanel({
               <span className="text-[10px] text-muted">
                 {question.length}/2000 · Answers can be mistaken; verify the sources.
               </span>
-              <Button type="submit" loading={busy}>
+              <Button type="submit" loading={busy} disabled={!question.trim() || busy}>
                 {busy ? 'Preparing answer…' : 'Ask question ↗'}
               </Button>
             </div>
           </form>
         </div>
-        <aside aria-label="Source documents" className="min-w-0 xl:sticky xl:top-5">
-          <Card className="p-5">
+        <aside aria-label="Source documents" className="min-w-0 lg:sticky lg:top-20">
+          <Card className="p-6">
             <Eyebrow>Source documents</Eyebrow>
             {sourceTurn?.result?.citations.length ? (
               <>
@@ -237,7 +263,7 @@ export function ChatPanel({
                 />
               </>
             ) : (
-              <p className="mt-3 text-xs leading-6 text-muted">
+              <p className="mt-3 text-sm leading-6 text-muted">
                 {sourceTurn?.result
                   ? sourceTurn.result.answer_origin === 'account_context'
                     ? 'This response uses your signed-in account or document assignments. No document passage was needed.'

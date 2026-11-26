@@ -235,13 +235,14 @@ export function DocumentsPanel({
   }
   return (
     <section aria-labelledby="documents-heading">
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
           <Eyebrow>Employee hub / Your knowledge library</Eyebrow>
           <h1 id="documents-heading" className="mt-2 text-3xl font-bold tracking-tight">
-            Your documents, together.
+            Your documents,{' '}
+            <span className="font-editorial font-medium italic text-azure">together.</span>
           </h1>
-          <p className="mt-2 text-xs text-muted">
+          <p className="mt-3 text-sm text-muted">
             {isAdmin
               ? 'Share company knowledge, assign personal letters and control employee access.'
               : 'Your personal letters and the company knowledge shared with you, in one place.'}
@@ -370,7 +371,7 @@ export function DocumentsPanel({
       </div>
       {documents && (
         <div className="mb-6 space-y-4">
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {[
               ['personal', 'Personal documents'],
               ['company', 'Company knowledge'],
@@ -380,7 +381,7 @@ export function DocumentsPanel({
                 key={value}
                 onClick={() => setCategory(value)}
                 aria-pressed={category === value}
-                className="rounded-xl border border-line bg-soft/40 p-4 text-left"
+                className="rounded-2xl border border-line bg-surface p-5 text-left shadow-sm"
               >
                 <span className="block text-2xl font-bold text-azure">
                   {documents.filter((d) => (d.visibility || 'company') === value).length}
@@ -390,7 +391,7 @@ export function DocumentsPanel({
             ))}
           </div>
           <div className="flex flex-wrap gap-3">
-            <label className="flex-1 text-xs">
+            <label className="min-w-0 flex-1 text-xs font-semibold">
               Find a document
               <input
                 value={search}
@@ -399,12 +400,12 @@ export function DocumentsPanel({
                 className="mt-2 block w-full rounded-lg border border-line bg-surface p-3 text-sm"
               />
             </label>
-            <label className="text-xs">
+            <label className="text-xs font-semibold">
               Show
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="mt-2 block rounded-lg border border-line bg-surface p-3 text-sm"
+                className="mt-2 block w-full rounded-lg border border-line bg-surface p-3 text-sm font-normal sm:min-w-64"
               >
                 <option value="all">All documents</option>
                 <option value="personal">Personal</option>
@@ -506,7 +507,7 @@ export function DocumentsPanel({
               )
               .map((document) => (
                 <li key={document.id}>
-                  <Card className="flex flex-wrap items-center justify-between gap-4 p-4 sm:p-5">
+                  <Card className="flex flex-wrap items-center justify-between gap-4 p-5 sm:p-6">
                     <div className="min-w-0 flex-1">
                       <div className="mb-2 flex items-center gap-2">
                         <span aria-hidden="true" className="text-azure">
@@ -537,12 +538,21 @@ export function DocumentsPanel({
                         </details>
                       )}
                     </div>
-                    <Badge>
+                    <Badge
+                      className="access-chip"
+                      tone={
+                        document.visibility === 'restricted'
+                          ? 'violet'
+                          : document.visibility === 'company' || !document.visibility
+                            ? 'teal'
+                            : 'azure'
+                      }
+                    >
                       {document.visibility === 'personal'
                         ? 'Personal'
                         : document.visibility === 'restricted'
                           ? 'Restricted'
-                          : 'Company'}
+                          : 'Company knowledge'}
                     </Badge>
                     <div className="flex flex-wrap items-center gap-3">
                       <Button variant="secondary" onClick={() => setPreview(document)}>
