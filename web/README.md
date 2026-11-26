@@ -1,12 +1,10 @@
-# Atlas employee knowledge hub
+# Atlas web application
 
-Requires Node.js 22.12+ and npm.
+The Atlas interface is built with React, TypeScript and Vite. It connects to the FastAPI application through a same-origin `/api` proxy. The workspace includes Overview, Ask documents, My documents, administrator-only Members, and a profile menu.
 
-The active React + TypeScript + Vite interface for Enterprise RAG. White surfaces and the shared Porcelain & Azure design system; azure is the project accent.
+## Local development
 
-## Run locally
-
-Start the FastAPI backend on port 8000 using the root guide, then:
+Requires Node.js 22.12+ and npm. Start the backend and its dependencies as described in the [root README](../README.md), then run:
 
 ```sh
 cd web
@@ -14,50 +12,39 @@ npm ci
 npm run dev
 ```
 
-Open `http://127.0.0.1:5173`. Vite forwards relative `/api/*` requests to `http://127.0.0.1:8000/*`. Set server-side `RAG_API_PROXY_TARGET` to use a different development API origin. No provider key or server secret belongs in a `VITE_*` environment variable.
-
-## Verify
+Open http://127.0.0.1:5173. Vite proxies `/api` to `http://127.0.0.1:8000` by default; set `RAG_API_PROXY_TARGET` in the Vite server environment to use another API origin. Do not put server secrets or model credentials in frontend environment variables.
 
 ```sh
+npm run typecheck
 npm test
 npm run build
 ```
 
-Tests use mocked HTTP responses to exercise the real application components, role-dependent actions, source rendering, failure handling and API boundary. They do not call inference providers or a database.
+The frontend tests mock the API and do not prove model quality or production performance. The production build is served by Nginx in Docker, which also proxies `/api` to the API container.
 
-## Behaviour
+## Product behaviour
 
-- Register a new workspace or sign in to an existing account. The token is accepted only after `/users/me` succeeds.
-- Session tokens, selected files and conversations stay in memory; no browser storage or cookies are used for credentials. Reload/sign-out clears the session and conversation.
-- Administrators have a Members page for account creation, listing/search and confirmed removal. Initial-password fields clear after submission; current-account removal is disabled.
-- Administrators can upload supported documents and confirm deletion. Members can browse and ask questions. The API remains the authority for permissions.
-- Upload rules come from authenticated `/documents/limits`; client checks improve feedback, while the API enforces actual file/content limits.
-- The document list uses real server records. “Stored” is not a claim about old migrated documents being searchable; the root migration/re-indexing guidance still applies.
-- Answers include expandable source excerpts. Model answers use safe Markdown (including GFM tables); raw HTML is skipped and remote images are not fetched. Source excerpts and user questions remain plain text.
-- Request failure is distinct from an answer. Upload/delete network failures can leave an uncertain result: inspect the refreshed document list before manually repeating. No mutation is automatically retried.
-- Session expiry returns to sign-in. In-flight requests are aborted on component teardown; browser cancellation does not guarantee cancellation of backend ingestion/inference.
-- Questions currently run independently; the displayed conversation is not sent as model context.
+- Registration creates an organisation and administrator; sign-in establishes a session only after the account is validated. A disabled public-registration setting is respected.
+- Credentials and conversations are held in memory. Reloading or signing out clears the session and conversation.
+- The overview offers quick questions and document activity. Administrators can also see member counts and management shortcuts.
+- Members can browse documents they are allowed to access and ask questions across their library or one selected document. Administrators can upload, assign access, retry failed uploads and delete documents. The API enforces permissions.
+- The conversation displays Markdown answers with citation buttons. The source sidebar groups references by document, shows available pages and opens the original document. Retrieved citations do not independently verify generated claims.
+- Questions are submitted independently; the visible conversation is not sent as model context. Request errors and uncertain upload or deletion outcomes are shown separately from successful answers.
+- Administrators manage member accounts from the Members page. The profile menu provides account details, password and photo changes, and sign-out confirmation.
+- The sign-in page links to password recovery. Local Docker defaults to an insecure, direct email-address reset for private development only; see the [root README](../README.md#password-recovery-and-public-hosting) before exposing the application.
 
-## Product identity
+## Design and assets
 
-`public/atlas-mark.svg` is the source for the Atlas mark: an azure tile with a geometric white A and a navigation-arrow cutout. `AtlasLogo` pairs it with the existing Manrope wordmark on sign-in and authenticated screens. The organisation name replaces internal workspace IDs in the header, sidebar and Members copy. Page titles identify the current screen and organisation and clear back to the sign-in title after sign-out. The logo button returns to Overview.
+The interface uses the shared `@portfolio/porcelain-azure` package from `vendor/porcelain-azure-0.1.0.tgz`, plus application-specific components and styles. It uses the Atlas mark, white cards, a pale-blue workspace background and azure accents. Decorative diagrams respect reduced-motion preferences.
 
-The static icon family includes an SVG favicon, a multi-size ICO, a 180px Apple touch icon, and 192px/512px icons referenced by `site.webmanifest`. The manifest supplies branding for compatible browsers; there is no service worker or offline document cache. No new fonts, palette or UI theme were introduced. To regenerate the derived icons after changing the SVG, run this development-only helper with Python and Pillow installed:
+`public/atlas-mark.svg` is the logo source. The favicon and app icons are committed assets; regenerate them after modifying the SVG with Python and Pillow:
 
 ```sh
 python3 scripts/generate-icons.py
 ```
 
-The generated icons are committed assets and need no Python/Pillow dependency during the frontend build or at runtime.
+The manifest provides browser branding; the application does not include a service worker or offline document cache.
 
-## Shared component dependency
+## Docker
 
-`@portfolio/porcelain-azure` is installed from `vendor/porcelain-azure-0.1.0.tgz`, a versioned snapshot from `SatyaMoulika/ai-portfolio`. This is the same library used in the portfolio, not a separate copy of its component source. The archive is committed so `npm ci` does not need private GitHub access or a published npm package.
-
-To update it, build/package a new version from the source design-system repository, replace the vendor archive, update package.json, regenerate package-lock.json and run this app's tests/build. This app adds only product-specific screens, feedback and a native delete dialog; shared controls, layouts, typography, tokens and motion remain in the library.
-
-## Local container integration
-
-The root `docker compose up -d --build` now also builds this interface. Open `http://127.0.0.1:8080`. Nginx serves Vite's static output and proxies `/api/` to the API service on the internal network. Database and inference remain internal. Do not deploy `dist/` to an arbitrary static host without a same-origin API proxy.
-
-The Nginx body limit is 11 MiB including multipart overhead. Change that deliberately if the API upload limit changes. This is a local-only Compose setup, not a public hosting/HTTPS configuration.
+From the repository root, `docker compose -p rag-updated up -d --build` starts the application at http://127.0.0.1:8080. After frontend-only changes, rebuild the web service with `docker compose -p rag-updated up -d --build web`. See the [root README](../README.md) for initial setup and the required Ollama model downloads.

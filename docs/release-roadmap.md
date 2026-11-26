@@ -1,5 +1,18 @@
 # First real-user release
 
+## Future work — tables, charts and images
+
+- [ ] Assess the current extraction pipeline and collect representative PDFs and documents containing tables, charts, images and scanned pages.
+- [ ] Extract tables with their row and column relationships, headers and page locations preserved for retrieval and answers.
+- [ ] Extract images and chart regions with their surrounding captions and page locations; determine when OCR or visual interpretation is needed.
+- [ ] Add OCR for scanned pages and image text, with clear handling for low-confidence or failed extraction.
+- [ ] Choose and integrate suitable visual or multimodal processing for charts and images, including resource and hosting constraints.
+- [ ] Chunk and index extracted content with enough context to connect each table, chart or image to its original document and page.
+- [ ] Preserve existing organisation and document access controls for all extracted content and derived representations.
+- [ ] Show citations that let users open the original page and verify answers based on tables, charts or images.
+- [ ] Build an evaluation set covering table lookup, chart interpretation, image text, scanned documents, citations and unanswerable questions; measure quality and latency before release.
+- [ ] Test upload failures, extraction limits, retries and reprocessing of existing documents before rollout.
+
 ## User and complete workflow
 An administrator creates a workspace and uploads a small set of documents. Workspace members ask questions and inspect source excerpts. The administrator can delete documents and stop them being retrieved. The first public demonstration should use a curated sample workspace or invitation-based signup, rather than unrestricted upload and inference.
 
